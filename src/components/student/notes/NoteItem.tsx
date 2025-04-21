@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { Note } from '../../../types/types';
-import { FileText, Image, File, MessageSquare, Clock } from 'lucide-react';
+import { FileText, Image, File, MessageSquare, Clock, Download, ExternalLink } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface NoteItemProps {
@@ -28,6 +28,22 @@ export default function NoteItem({ note }: NoteItemProps) {
         return <MessageSquare className="h-5 w-5 text-gray-400" />;
       default:
         return <FileText className="h-5 w-5 text-gray-400" />;
+    }
+  };
+
+  // Get file name from the URL
+  const getFileName = (url: string) => {
+    if (!url) return 'File';
+    const parts = url.split('/');
+    const fileName = parts[parts.length - 1];
+    // Decode URL encoded characters and remove timestamp prefix
+    try {
+      const decodedName = decodeURIComponent(fileName);
+      // Remove timestamp if present (timestamp_filename format)
+      const withoutTimestamp = decodedName.replace(/^\d+_/, '');
+      return withoutTimestamp;
+    } catch (e) {
+      return fileName;
     }
   };
 
@@ -61,33 +77,84 @@ export default function NoteItem({ note }: NoteItemProps) {
                   src={note.file_url} 
                   alt="Note" 
                   className="max-w-full rounded-md" 
+                  loading="lazy"
                 />
+                {note.content && (
+                  <p className="mt-3 text-gray-600 text-sm">{note.content}</p>
+                )}
               </div>
             )}
             
             {note.type === 'file' && note.file_url && (
-              <div className="flex items-center p-4 bg-gray-50 rounded-lg">
-                <File className="h-6 w-6 text-gray-400 mr-3" />
-                <div>
-                  <p className="font-medium">Document</p>
-                  <a 
-                    href={note.file_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-xs text-blue-600 hover:underline"
-                  >
-                    View Document
-                  </a>
+              <div className="flex flex-col">
+                <div className="flex items-center p-4 bg-gray-50 rounded-lg">
+                  <File className="h-6 w-6 text-gray-400 mr-3 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{getFileName(note.file_url)}</p>
+                    <div className="flex mt-2 space-x-3">
+                      <a 
+                        href={note.file_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 hover:underline flex items-center"
+                        download
+                      >
+                        <Download className="h-3 w-3 mr-1" />
+                        Download
+                      </a>
+                      <a 
+                        href={note.file_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 hover:underline flex items-center"
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        View
+                      </a>
+                    </div>
+                  </div>
                 </div>
+                {note.content && (
+                  <p className="mt-3 text-gray-600 text-sm">{note.content}</p>
+                )}
               </div>
             )}
             
-            {note.type === 'transcript' && note.content && (
-              <div>
+            {note.type === 'transcript' && note.file_url && (
+              <div className="flex flex-col">
                 <div className="p-2 bg-gray-50 rounded-md mb-3">
-                  <p className="text-xs font-medium text-gray-600">Transcript Summary</p>
+                  <p className="text-xs font-medium text-gray-600">Transcript</p>
                 </div>
-                <p className="whitespace-pre-wrap leading-relaxed">{note.content}</p>
+                <div className="flex items-center p-4 bg-gray-50 rounded-lg">
+                  <MessageSquare className="h-6 w-6 text-gray-400 mr-3 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{getFileName(note.file_url)}</p>
+                    <div className="flex mt-2 space-x-3">
+                      <a 
+                        href={note.file_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 hover:underline flex items-center"
+                        download
+                      >
+                        <Download className="h-3 w-3 mr-1" />
+                        Download
+                      </a>
+                      <a 
+                        href={note.file_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 hover:underline flex items-center"
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        View
+                      </a>
+                    </div>
+                  </div>
+                </div>
+                {note.content && (
+                  <p className="mt-3 text-gray-600 text-sm">{note.content}</p>
+                )}
               </div>
             )}
           </div>
