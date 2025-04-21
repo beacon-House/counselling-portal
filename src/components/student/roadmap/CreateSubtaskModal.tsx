@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { Subtask } from '../../../types/types';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface CreateSubtaskModalProps {
   isOpen: boolean;
@@ -78,61 +79,75 @@ export default function CreateSubtaskModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-25 flex items-center justify-center z-50">
-      <div 
-        ref={modalRef}
-        className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-4"
-      >
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium">Add New Subtask</h3>
-          <button 
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-500"
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.2 }}
+            ref={modalRef}
+            className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md mx-4"
           >
-            <X className="h-5 w-5" />
-          </button>
+            <div className="flex justify-between items-center mb-5">
+              <h3 className="text-lg font-light text-gray-800">Add New Subtask</h3>
+              <motion.button 
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <X className="h-5 w-5" />
+              </motion.button>
+            </div>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit}>
+              <div className="mb-5">
+                <label htmlFor="subtask-name" className="block text-sm font-medium text-gray-700 mb-2">
+                  Subtask Name *
+                </label>
+                <input
+                  ref={inputRef}
+                  id="subtask-name"
+                  type="text"
+                  value={subtaskName}
+                  onChange={(e) => setSubtaskName(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-300 bg-gray-50"
+                  placeholder="Enter subtask name"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  type="submit"
+                  disabled={loading || !subtaskName.trim()}
+                  className="px-4 py-2 text-sm font-medium text-white bg-gray-800 rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                >
+                  {loading ? 'Adding...' : 'Add Subtask'}
+                </motion.button>
+              </div>
+            </form>
+          </motion.div>
         </div>
-
-        {error && (
-          <div className="mb-4 p-2 bg-red-50 text-red-700 text-sm rounded-md">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label htmlFor="subtask-name" className="block text-sm font-medium text-gray-700 mb-1">
-              Subtask Name *
-            </label>
-            <input
-              ref={inputRef}
-              id="subtask-name"
-              type="text"
-              value={subtaskName}
-              onChange={(e) => setSubtaskName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400"
-              placeholder="Enter subtask name"
-            />
-          </div>
-
-          <div className="flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading || !subtaskName.trim()}
-              className="px-4 py-2 text-sm font-medium text-white bg-gray-800 rounded-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Adding...' : 'Add Subtask'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      )}
+    </AnimatePresence>
   );
 }

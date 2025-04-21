@@ -8,6 +8,7 @@ import { Phase, Task, Subtask } from '../../../types/types';
 import { supabase } from '../../../lib/supabase';
 import CreateSubtaskModal from './CreateSubtaskModal';
 import SubtaskList from './SubtaskList';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface RoadmapViewProps {
   phases: Phase[];
@@ -112,73 +113,106 @@ export default function RoadmapView({
   };
 
   return (
-    <div className="p-4">
-      <h2 className="text-lg font-medium mb-4">Roadmap Progress</h2>
+    <div className="p-6">
+      <h2 className="text-xl font-light mb-6 text-gray-800">Roadmap Progress</h2>
       
       <div className="space-y-4">
         {phases.map(phase => (
-          <div key={phase.id} className="border border-gray-200 rounded-md">
+          <motion.div 
+            key={phase.id} 
+            className="border border-gray-100 rounded-lg shadow-sm overflow-hidden"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
             <div 
-              className={`flex justify-between items-center p-3 cursor-pointer ${
-                activePhaseId === phase.id ? 'bg-gray-50' : 'bg-white'
+              className={`flex justify-between items-center p-4 cursor-pointer transition-colors duration-200 ${
+                activePhaseId === phase.id ? 'bg-gray-50' : 'bg-white hover:bg-gray-50'
               }`}
               onClick={() => togglePhase(phase.id)}
             >
               <div className="flex items-center">
-                {expandedPhases[phase.id] ? (
-                  <ChevronDown className="h-4 w-4 text-gray-500 mr-2" />
-                ) : (
-                  <ChevronRight className="h-4 w-4 text-gray-500 mr-2" />
-                )}
-                <span className="font-medium">{phase.sequence}. {phase.name}</span>
+                <motion.div
+                  initial={false}
+                  animate={{ rotate: expandedPhases[phase.id] ? 90 : 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ChevronRight className="h-5 w-5 text-gray-400 mr-3" />
+                </motion.div>
+                <span className="font-medium text-gray-700">{phase.sequence}. {phase.name}</span>
               </div>
             </div>
             
-            {expandedPhases[phase.id] && phase.tasks && (
-              <div className="pl-8 pr-3 pb-3">
-                {phase.tasks.map(task => (
-                  <div key={task.id} className="mt-2">
-                    <div 
-                      className={`flex justify-between items-center p-2 cursor-pointer rounded-md ${
-                        activeTaskId === task.id ? 'bg-gray-100' : 'hover:bg-gray-50'
-                      }`}
-                      onClick={() => toggleTask(task.id, phase.id)}
-                    >
-                      <div className="flex items-center">
-                        {expandedTasks[task.id] ? (
-                          <ChevronDown className="h-4 w-4 text-gray-500 mr-2" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4 text-gray-500 mr-2" />
-                        )}
-                        <span>{task.sequence}. {task.name}</span>
+            <AnimatePresence>
+              {expandedPhases[phase.id] && phase.tasks && (
+                <motion.div 
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="overflow-hidden"
+                >
+                  <div className="pl-10 pr-4 pb-4 pt-1">
+                    {phase.tasks.map(task => (
+                      <div key={task.id} className="mt-2">
+                        <motion.div 
+                          className={`flex justify-between items-center p-3 cursor-pointer rounded-lg transition-colors duration-200 ${
+                            activeTaskId === task.id ? 'bg-gray-100' : 'hover:bg-gray-50'
+                          }`}
+                          onClick={() => toggleTask(task.id, phase.id)}
+                          whileHover={{ backgroundColor: "rgb(243 244 246)" }}
+                        >
+                          <div className="flex items-center">
+                            <motion.div
+                              initial={false}
+                              animate={{ rotate: expandedTasks[task.id] ? 90 : 0 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <ChevronRight className="h-4 w-4 text-gray-400 mr-2" />
+                            </motion.div>
+                            <span className="text-gray-700">{task.sequence}. {task.name}</span>
+                          </div>
+                          
+                          <motion.button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openCreateSubtaskModal(task.id);
+                            }}
+                            className="p-1 rounded-full hover:bg-gray-200 transition-colors duration-200"
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                          >
+                            <Plus className="h-3.5 w-3.5 text-gray-500" />
+                          </motion.button>
+                        </motion.div>
+                        
+                        <AnimatePresence>
+                          {expandedTasks[task.id] && (
+                            <motion.div 
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="pl-9 mt-1 ml-2">
+                                <SubtaskList 
+                                  subtasks={subtasks[task.id] || []} 
+                                  studentId={studentId} 
+                                  taskId={task.id}
+                                  onSubtaskUpdate={fetchAllSubtasks}
+                                />
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
-                      
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openCreateSubtaskModal(task.id);
-                        }}
-                        className="p-1 rounded hover:bg-gray-200"
-                      >
-                        <Plus className="h-3.5 w-3.5 text-gray-500" />
-                      </button>
-                    </div>
-                    
-                    {expandedTasks[task.id] && (
-                      <div className="pl-6 mt-1">
-                        <SubtaskList 
-                          subtasks={subtasks[task.id] || []} 
-                          studentId={studentId} 
-                          taskId={task.id}
-                          onSubtaskUpdate={fetchAllSubtasks}
-                        />
-                      </div>
-                    )}
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
         ))}
       </div>
       

@@ -5,6 +5,7 @@ import React from 'react';
 import { Subtask } from '../../../types/types';
 import { supabase } from '../../../lib/supabase';
 import { Check, Clock, Play, AlertCircle, X } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface SubtaskListProps {
   subtasks: Subtask[];
@@ -65,81 +66,107 @@ export default function SubtaskList({ subtasks, studentId, taskId, onSubtaskUpda
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'done':
-        return 'bg-green-100 text-green-700';
+        return 'bg-green-50 text-green-700';
       case 'in_progress':
-        return 'bg-blue-100 text-blue-700';
+        return 'bg-blue-50 text-blue-700';
       case 'blocked':
-        return 'bg-red-100 text-red-700';
+        return 'bg-red-50 text-red-700';
       case 'not_applicable':
         return 'bg-gray-100 text-gray-500';
       default: // yet_to_start
-        return 'bg-gray-100 text-gray-700';
+        return 'bg-gray-50 text-gray-700';
     }
+  };
+
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const item = {
+    hidden: { opacity: 0, y: 10 },
+    show: { opacity: 1, y: 0 }
   };
 
   if (subtasks.length === 0) {
     return (
-      <div className="text-sm text-gray-500 py-2">
+      <div className="text-sm text-gray-400 py-3 pl-2">
         No subtasks yet. Create one to get started.
       </div>
     );
   }
 
   return (
-    <ul className="space-y-2 py-2">
+    <motion.ul 
+      className="space-y-2 py-2"
+      variants={container}
+      initial="hidden"
+      animate="show"
+    >
       {subtasks.map(subtask => (
-        <li key={subtask.id} className="flex items-center justify-between py-1">
-          <span className="text-sm">{subtask.name}</span>
+        <motion.li 
+          key={subtask.id} 
+          className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+          variants={item}
+        >
+          <span className="text-sm text-gray-700">{subtask.name}</span>
           
           <div className="relative group">
-            <button 
-              className={`flex items-center px-2 py-1 rounded-md text-xs ${getStatusColor(subtask.status)}`}
+            <motion.button 
+              className={`flex items-center px-2.5 py-1 rounded-full text-xs ${getStatusColor(subtask.status)}`}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
             >
               <span className="mr-1.5">{getStatusIcon(subtask.status)}</span>
               <span>{getStatusText(subtask.status)}</span>
-            </button>
+            </motion.button>
             
             {/* Status dropdown menu */}
-            <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg py-1 z-10 hidden group-hover:block">
+            <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg py-1 z-10 hidden group-hover:block">
               <button
                 onClick={() => handleStatusChange(subtask.id, 'yet_to_start')}
-                className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
               >
                 <Clock className="mr-2 h-4 w-4 text-gray-500" />
                 Yet to Start
               </button>
               <button
                 onClick={() => handleStatusChange(subtask.id, 'in_progress')}
-                className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
               >
                 <Play className="mr-2 h-4 w-4 text-blue-600" />
                 In Progress
               </button>
               <button
                 onClick={() => handleStatusChange(subtask.id, 'done')}
-                className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
               >
                 <Check className="mr-2 h-4 w-4 text-green-600" />
                 Done
               </button>
               <button
                 onClick={() => handleStatusChange(subtask.id, 'blocked')}
-                className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
               >
                 <AlertCircle className="mr-2 h-4 w-4 text-red-600" />
                 Blocked
               </button>
               <button
                 onClick={() => handleStatusChange(subtask.id, 'not_applicable')}
-                className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
               >
                 <X className="mr-2 h-4 w-4 text-gray-500" />
                 Not Applicable
               </button>
             </div>
           </div>
-        </li>
+        </motion.li>
       ))}
-    </ul>
+    </motion.ul>
   );
 }

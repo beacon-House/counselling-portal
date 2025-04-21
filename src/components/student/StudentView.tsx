@@ -9,6 +9,7 @@ import { Student, Phase, Task } from '../../types/types';
 import RoadmapView from './roadmap/RoadmapView';
 import NotesPanel from './notes/NotesPanel';
 import StudentHeader from './StudentHeader';
+import { motion } from 'framer-motion';
 
 export default function StudentView() {
   const { studentId } = useParams<{ studentId: string }>();
@@ -78,18 +79,23 @@ export default function StudentView() {
     <div className="h-full flex flex-col">
       {loading ? (
         <div className="flex-1 flex justify-center items-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-700"></div>
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-gray-300"></div>
         </div>
       ) : error ? (
         <div className="flex-1 flex justify-center items-center">
-          <div className="text-red-500">{error}</div>
+          <div className="text-red-500 bg-red-50 p-4 rounded-lg">{error}</div>
         </div>
       ) : student ? (
         <>
           <StudentHeader student={student} />
           
-          <div className="flex-1 flex overflow-hidden">
-            <div className="w-1/2 overflow-auto border-r border-gray-200">
+          <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+              className="w-full md:w-1/2 overflow-auto border-b md:border-b-0 md:border-r border-gray-100"
+            >
               <RoadmapView 
                 phases={phasesWithTasks} 
                 studentId={studentId || ''} 
@@ -98,15 +104,20 @@ export default function StudentView() {
                 setActivePhaseId={setActivePhaseId}
                 setActiveTaskId={setActiveTaskId}
               />
-            </div>
+            </motion.div>
             
-            <div className="w-1/2 overflow-auto">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="w-full md:w-1/2 overflow-auto"
+            >
               <NotesPanel 
                 studentId={studentId || ''} 
                 phaseId={activePhaseId} 
                 taskId={activeTaskId}
               />
-            </div>
+            </motion.div>
           </div>
         </>
       ) : (

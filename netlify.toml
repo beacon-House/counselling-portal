@@ -1,0 +1,13 @@
+# Netlify configuration file
+# This configuration ensures that all routes are handled by the single page application
+
+[build]
+  publish = "dist"
+  command = "npm run build"
+
+# The following redirect rule tells Netlify to serve the index.html for any path
+# This allows React Router to handle routing on the client side
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

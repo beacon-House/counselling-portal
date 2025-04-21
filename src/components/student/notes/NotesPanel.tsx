@@ -7,6 +7,7 @@ import { supabase } from '../../../lib/supabase';
 import { Note } from '../../../types/types';
 import { PlusCircle, FileText, Image, File, MessageSquare, Loader } from 'lucide-react';
 import NoteItem from './NoteItem';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface NotesPanelProps {
   studentId: string;
@@ -90,103 +91,84 @@ export default function NotesPanel({ studentId, phaseId, taskId }: NotesPanelPro
     }
   };
 
-  const getNoteTypeIcon = (type: string) => {
-    switch (type) {
-      case 'text':
-        return <FileText className="h-4 w-4" />;
-      case 'image':
-        return <Image className="h-4 w-4" />;
-      case 'file':
-        return <File className="h-4 w-4" />;
-      case 'transcript':
-        return <MessageSquare className="h-4 w-4" />;
-      default:
-        return <FileText className="h-4 w-4" />;
-    }
-  };
-
   return (
-    <div className="p-4">
-      <h2 className="text-lg font-medium mb-4">Notes</h2>
+    <div className="p-6">
+      <h2 className="text-xl font-light mb-6 text-gray-800">Notes</h2>
       
       {/* Create Note Section */}
-      <div className="mb-6 bg-white border border-gray-200 rounded-lg shadow-sm">
-        <div className="border-b border-gray-200 flex">
-          <button
-            onClick={() => setActiveNoteType('text')}
-            className={`flex-1 py-2 text-sm font-medium ${
-              activeNoteType === 'text' 
-                ? 'text-gray-900 border-b-2 border-gray-900'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <FileText className="h-4 w-4 inline mr-1" />
-            Text
-          </button>
-          <button
-            onClick={() => setActiveNoteType('file')}
-            className={`flex-1 py-2 text-sm font-medium ${
-              activeNoteType === 'file' 
-                ? 'text-gray-900 border-b-2 border-gray-900'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <File className="h-4 w-4 inline mr-1" />
-            File
-          </button>
-          <button
-            onClick={() => setActiveNoteType('image')}
-            className={`flex-1 py-2 text-sm font-medium ${
-              activeNoteType === 'image' 
-                ? 'text-gray-900 border-b-2 border-gray-900'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Image className="h-4 w-4 inline mr-1" />
-            Image
-          </button>
-          <button
-            onClick={() => setActiveNoteType('transcript')}
-            className={`flex-1 py-2 text-sm font-medium ${
-              activeNoteType === 'transcript' 
-                ? 'text-gray-900 border-b-2 border-gray-900'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <MessageSquare className="h-4 w-4 inline mr-1" />
-            Transcript
-          </button>
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="mb-8 bg-white border border-gray-100 rounded-lg shadow-sm overflow-hidden"
+      >
+        <div className="flex border-b border-gray-100">
+          {[
+            { type: 'text', icon: FileText, label: 'Text' },
+            { type: 'file', icon: File, label: 'File' },
+            { type: 'image', icon: Image, label: 'Image' },
+            { type: 'transcript', icon: MessageSquare, label: 'Transcript' },
+          ].map(item => (
+            <button
+              key={item.type}
+              onClick={() => setActiveNoteType(item.type as any)}
+              className={`flex-1 py-3 text-sm font-medium transition-all duration-200 flex items-center justify-center ${
+                activeNoteType === item.type 
+                  ? 'text-gray-900 border-b-2 border-gray-800 bg-gray-50'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <item.icon className="h-4 w-4 inline mr-2" />
+              {item.label}
+            </button>
+          ))}
         </div>
         
-        <div className="p-3">
-          {activeNoteType === 'text' ? (
-            <textarea
-              value={newNoteContent}
-              onChange={(e) => setNewNoteContent(e.target.value)}
-              placeholder="Type your note here..."
-              className="w-full p-2 border border-gray-300 rounded-md min-h-[100px] focus:outline-none focus:ring-1 focus:ring-gray-400"
-            />
-          ) : (
-            <div className="border-2 border-dashed border-gray-300 rounded-md p-6 flex flex-col items-center">
-              <div className="mb-2">
-                {activeNoteType === 'file' && <File className="h-10 w-10 text-gray-400" />}
-                {activeNoteType === 'image' && <Image className="h-10 w-10 text-gray-400" />}
-                {activeNoteType === 'transcript' && <MessageSquare className="h-10 w-10 text-gray-400" />}
-              </div>
-              <p className="text-sm text-gray-500">
-                Drop your {activeNoteType} here or click to browse
-              </p>
-              <button className="mt-3 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-md">
-                Browse files
-              </button>
-            </div>
-          )}
+        <div className="p-4">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeNoteType}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              {activeNoteType === 'text' ? (
+                <textarea
+                  value={newNoteContent}
+                  onChange={(e) => setNewNoteContent(e.target.value)}
+                  placeholder="Type your note here..."
+                  className="w-full p-4 border border-gray-200 rounded-lg min-h-[120px] focus:outline-none focus:ring-1 focus:ring-gray-300 bg-gray-50 text-gray-700"
+                />
+              ) : (
+                <div className="border-2 border-dashed border-gray-200 rounded-lg p-8 flex flex-col items-center bg-gray-50">
+                  <div className="mb-3">
+                    {activeNoteType === 'file' && <File className="h-12 w-12 text-gray-300" />}
+                    {activeNoteType === 'image' && <Image className="h-12 w-12 text-gray-300" />}
+                    {activeNoteType === 'transcript' && <MessageSquare className="h-12 w-12 text-gray-300" />}
+                  </div>
+                  <p className="text-sm text-gray-500 text-center mb-3">
+                    Drop your {activeNoteType} here or click to browse
+                  </p>
+                  <motion.button 
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="mt-2 text-sm text-gray-700 bg-white hover:bg-gray-100 px-4 py-2 rounded-lg border border-gray-200 transition-all duration-200"
+                  >
+                    Browse files
+                  </motion.button>
+                </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
           
-          <div className="flex justify-end mt-3">
-            <button
+          <div className="flex justify-end mt-4">
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
               onClick={createNote}
               disabled={isSaving || (activeNoteType === 'text' && !newNoteContent.trim())}
-              className="flex items-center px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
             >
               {isSaving ? (
                 <Loader className="animate-spin h-4 w-4 mr-2" />
@@ -194,25 +176,38 @@ export default function NotesPanel({ studentId, phaseId, taskId }: NotesPanelPro
                 <PlusCircle className="h-4 w-4 mr-2" />
               )}
               Add Note
-            </button>
+            </motion.button>
           </div>
         </div>
-      </div>
+      </motion.div>
       
       {/* Notes List */}
-      <div className="space-y-4">
+      <div className="space-y-5">
         {loading ? (
           <div className="flex justify-center py-10">
-            <Loader className="animate-spin h-8 w-8 text-gray-500" />
+            <Loader className="animate-spin h-8 w-8 text-gray-300" />
           </div>
         ) : notes.length > 0 ? (
-          notes.map(note => (
-            <NoteItem key={note.id} note={note} />
-          ))
+          <AnimatePresence>
+            {notes.map((note, index) => (
+              <motion.div
+                key={note.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
+              >
+                <NoteItem note={note} />
+              </motion.div>
+            ))}
+          </AnimatePresence>
         ) : (
-          <div className="text-center py-10">
-            <p className="text-gray-500">No notes yet. Create your first note above.</p>
-          </div>
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-12"
+          >
+            <p className="text-gray-400">No notes yet. Create your first note above.</p>
+          </motion.div>
         )}
       </div>
     </div>

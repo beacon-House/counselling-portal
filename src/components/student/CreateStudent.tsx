@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { motion } from 'framer-motion';
 
 export default function CreateStudent() {
   const { counsellor } = useAuth();
@@ -62,22 +63,32 @@ export default function CreateStudent() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-4xl">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="container mx-auto px-5 py-8 max-w-3xl"
+    >
       <div className="mb-6">
-        <button
+        <motion.button
+          whileHover={{ x: -3 }}
           onClick={() => navigate(-1)}
-          className="flex items-center text-gray-600 hover:text-gray-900"
+          className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
         >
-          <ArrowLeft className="h-4 w-4 mr-1" />
+          <ArrowLeft className="h-4 w-4 mr-2" />
           Back
-        </button>
+        </motion.button>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h1 className="text-2xl font-bold mb-6">Create New Student</h1>
+      <motion.div 
+        initial={{ y: 20 }}
+        animate={{ y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="bg-white rounded-xl shadow-sm border border-gray-100 p-8"
+      >
+        <h1 className="text-2xl font-light mb-8 text-gray-800">Create New Student</h1>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 text-red-700 border border-red-200 rounded-md">
+          <div className="mb-6 p-4 bg-red-50 text-red-700 border border-red-100 rounded-lg">
             {error}
           </div>
         )}
@@ -85,7 +96,7 @@ export default function CreateStudent() {
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Full Name *
               </label>
               <input
@@ -94,12 +105,12 @@ export default function CreateStudent() {
                 required
                 value={formData.name}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400"
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-300 bg-gray-50"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Email Address *
               </label>
               <input
@@ -108,12 +119,12 @@ export default function CreateStudent() {
                 required
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400"
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-300 bg-gray-50"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Phone Number
               </label>
               <input
@@ -121,12 +132,12 @@ export default function CreateStudent() {
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400"
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-300 bg-gray-50"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Target Graduation Year *
               </label>
               <input
@@ -137,12 +148,12 @@ export default function CreateStudent() {
                 max={new Date().getFullYear() + 10}
                 value={formData.target_year}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400"
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-300 bg-gray-50"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Current Grade *
               </label>
               <select
@@ -150,7 +161,7 @@ export default function CreateStudent() {
                 required
                 value={formData.grade}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400"
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-300 bg-gray-50"
               >
                 <option value="" disabled>Select grade</option>
                 <option value="Grade 9">Grade 9</option>
@@ -161,7 +172,7 @@ export default function CreateStudent() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Curriculum *
               </label>
               <select
@@ -169,7 +180,7 @@ export default function CreateStudent() {
                 required
                 value={formData.curriculum}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400"
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-300 bg-gray-50"
               >
                 <option value="" disabled>Select curriculum</option>
                 <option value="US">US</option>
@@ -183,17 +194,21 @@ export default function CreateStudent() {
           </div>
 
           <div className="flex justify-end mt-8">
-            <button
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               type="button"
               onClick={() => navigate(-1)}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md mr-3 hover:bg-gray-50"
+              className="px-5 py-3 border border-gray-200 text-gray-700 rounded-lg mr-4 hover:bg-gray-50 transition-colors"
             >
               Cancel
-            </button>
-            <button
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700 flex items-center"
+              className="px-5 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-700 flex items-center transition-colors"
             >
               {loading ? (
                 <span className="inline-block h-4 w-4 border-t-2 border-b-2 border-white rounded-full animate-spin mr-2"></span>
@@ -201,10 +216,10 @@ export default function CreateStudent() {
                 <Save className="h-4 w-4 mr-2" />
               )}
               Create Student
-            </button>
+            </motion.button>
           </div>
         </form>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

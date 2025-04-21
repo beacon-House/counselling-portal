@@ -4,6 +4,7 @@
 import React from 'react';
 import { Note } from '../../../types/types';
 import { FileText, Image, File, MessageSquare, Clock } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface NoteItemProps {
   note: Note;
@@ -18,36 +19,40 @@ export default function NoteItem({ note }: NoteItemProps) {
   const getNoteIcon = () => {
     switch (note.type) {
       case 'text':
-        return <FileText className="h-5 w-5 text-gray-500" />;
+        return <FileText className="h-5 w-5 text-gray-400" />;
       case 'image':
-        return <Image className="h-5 w-5 text-gray-500" />;
+        return <Image className="h-5 w-5 text-gray-400" />;
       case 'file':
-        return <File className="h-5 w-5 text-gray-500" />;
+        return <File className="h-5 w-5 text-gray-400" />;
       case 'transcript':
-        return <MessageSquare className="h-5 w-5 text-gray-500" />;
+        return <MessageSquare className="h-5 w-5 text-gray-400" />;
       default:
-        return <FileText className="h-5 w-5 text-gray-500" />;
+        return <FileText className="h-5 w-5 text-gray-400" />;
     }
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4">
+    <motion.div 
+      className="bg-white border border-gray-100 rounded-lg p-5 shadow-sm"
+      whileHover={{ y: -2, boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)" }}
+      transition={{ duration: 0.2 }}
+    >
       <div className="flex items-start">
-        <div className="mr-3">
+        <div className="mr-4 mt-1">
           {getNoteIcon()}
         </div>
         
         <div className="flex-1">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-gray-500 flex items-center">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs text-gray-400 flex items-center">
               <Clock className="h-3 w-3 mr-1" />
               {note.created_at ? formatDate(note.created_at) : 'Just now'}
             </span>
           </div>
           
-          <div className="prose prose-sm max-w-none">
+          <div className="prose prose-sm max-w-none text-gray-700">
             {note.type === 'text' && note.content && (
-              <p className="whitespace-pre-wrap">{note.content}</p>
+              <p className="whitespace-pre-wrap leading-relaxed">{note.content}</p>
             )}
             
             {note.type === 'image' && note.file_url && (
@@ -61,8 +66,8 @@ export default function NoteItem({ note }: NoteItemProps) {
             )}
             
             {note.type === 'file' && note.file_url && (
-              <div className="flex items-center p-3 bg-gray-50 rounded-md">
-                <File className="h-6 w-6 text-gray-500 mr-2" />
+              <div className="flex items-center p-4 bg-gray-50 rounded-lg">
+                <File className="h-6 w-6 text-gray-400 mr-3" />
                 <div>
                   <p className="font-medium">Document</p>
                   <a 
@@ -79,15 +84,15 @@ export default function NoteItem({ note }: NoteItemProps) {
             
             {note.type === 'transcript' && note.content && (
               <div>
-                <div className="p-2 bg-gray-50 rounded-md mb-2">
-                  <p className="text-xs font-medium text-gray-700">Transcript Summary</p>
+                <div className="p-2 bg-gray-50 rounded-md mb-3">
+                  <p className="text-xs font-medium text-gray-600">Transcript Summary</p>
                 </div>
-                <p className="whitespace-pre-wrap">{note.content}</p>
+                <p className="whitespace-pre-wrap leading-relaxed">{note.content}</p>
               </div>
             )}
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
