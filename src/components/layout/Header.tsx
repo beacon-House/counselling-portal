@@ -3,7 +3,7 @@
  * Contains user profile info and global search
  */
 import React from 'react';
-import { Search, User, MessageSquare, LogOut, Menu } from 'lucide-react';
+import { Search, User, MessageSquare, LogOut, Menu, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -17,9 +17,23 @@ interface HeaderProps {
 
 export default function Header({ counsellorName, toggleRightPanel, toggleSidebar, showSidebar }: HeaderProps) {
   const { signOut } = useAuth();
+  const [showDropdown, setShowDropdown] = React.useState(false);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleSignOut = async () => {
     await signOut();
+    setShowDropdown(false);
   };
 
   return (
@@ -65,15 +79,23 @@ export default function Header({ counsellorName, toggleRightPanel, toggleSidebar
 
           <div className="flex items-center">
             <span className="mr-2 text-sm font-medium text-gray-700 hidden md:inline-block">{counsellorName}</span>
-            <div className="relative group">
+            <div className="relative" ref={dropdownRef}>
               <motion.button 
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="flex rounded-full bg-gray-100 text-sm focus:outline-none p-1"
+                className="flex items-center rounded-full bg-gray-100 text-sm focus:outline-none p-1 pr-2"
+                onClick={() => setShowDropdown(!showDropdown)}
               >
                 <User className="h-7 w-7 rounded-full p-1" />
+                <ChevronDown className="h-4 w-4 ml-1 text-gray-500" />
               </motion.button>
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50 hidden group-hover:block">
+              {showDropdown && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50"
+                >
                 <button
                   onClick={handleSignOut}
                   className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -81,7 +103,8 @@ export default function Header({ counsellorName, toggleRightPanel, toggleSidebar
                   <LogOut className="mr-2 h-4 w-4" />
                   Sign out
                 </button>
-              </div>
+              </motion.div>
+              )}
             </div>
           </div>
         </div>
