@@ -20,6 +20,7 @@ CREATE TABLE students (
     target_year INT NOT NULL, -- Target year of college entry (e.g., 2027)
     grade TEXT NOT NULL,      -- Current grade (e.g., 11 or 12)
     curriculum TEXT NOT NULL, -- IB / IGCSE / CBSE / ICSE / Other
+    other_curriculum TEXT,    -- For storing custom curriculum when "Others" is selected
     student_context TEXT,     -- AI-generated summary of student profile/progress
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     counsellor_id UUID REFERENCES counsellors(id) ON DELETE SET NULL
@@ -416,4 +417,3 @@ INSERT INTO phases (name, sequence) VALUES ('Application Prep', 9);
         SELECT id, 'Interview Preparation (If Applicable)', 7
         FROM phases
         WHERE name = 'Application Prep';
-        

@@ -13,6 +13,7 @@ export default function CreateStudent() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showOtherCurriculum, setShowOtherCurriculum] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -20,11 +21,19 @@ export default function CreateStudent() {
     phone: '',
     target_year: new Date().getFullYear() + 4, // Default to 4 years from now
     grade: '',
-    curriculum: ''
+    curriculum: '',
+    other_curriculum: ''
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    
+    if (name === 'curriculum' && value === 'Others') {
+      setShowOtherCurriculum(true);
+    } else if (name === 'curriculum') {
+      setShowOtherCurriculum(false);
+    }
+    
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -40,11 +49,26 @@ export default function CreateStudent() {
     }
 
     try {
-      // Create student record
+      // Determine the actual curriculum value to save
+      const finalCurriculum = formData.curriculum === 'Others' 
+        ? formData.other_curriculum 
+        : formData.curriculum;
+      
+      if (formData.curriculum === 'Others' && !formData.other_curriculum.trim()) {
+        throw new Error('Please specify the curriculum when selecting "Others"');
+      }
+      
+      // Create student record - only include needed fields and handle other_curriculum explicitly
       const { data, error } = await supabase
         .from('students')
         .insert({
-          ...formData,
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          target_year: formData.target_year,
+          grade: formData.grade,
+          curriculum: finalCurriculum,
+          other_curriculum: formData.other_curriculum,  // Explicitly include this field
           counsellor_id: counsellor.id
         })
         .select()
@@ -56,7 +80,9 @@ export default function CreateStudent() {
       navigate(`/student/${data.id}`);
     } catch (err) {
       console.error('Error creating student:', err);
-      setError('Failed to create student. Please try again.');
+      setError(typeof err === 'object' && err !== null && 'message' in err 
+        ? String(err.message) 
+        : 'Failed to create student. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -171,7 +197,7 @@ export default function CreateStudent() {
               </select>
             </div>
 
-            <div>
+            <div className={showOtherCurriculum ? '' : 'md:col-span-2'}>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Curriculum *
               </label>
@@ -189,8 +215,28 @@ export default function CreateStudent() {
                 <option value="CBSE">CBSE</option>
                 <option value="IGCSE">IGCSE</option>
                 <option value="A-Levels">A-Levels</option>
+                <option value="ICSE">ICSE</option>
+                <option value="State Board">State Board</option>
+                <option value="Others">Others</option>
               </select>
             </div>
+
+            {showOtherCurriculum && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Specify Curriculum *
+                </label>
+                <input
+                  type="text"
+                  name="other_curriculum"
+                  required
+                  value={formData.other_curriculum}
+                  onChange={handleChange}
+                  placeholder="Enter curriculum name"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-300 bg-gray-50"
+                />
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end mt-8">
