@@ -1,53 +1,58 @@
 /**
  * Notes panel component
- * Displays and manages notes for a student/phase/task
+ * Displays and manages notes for a student/phase/task with full-screen editing capability
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { Note } from '../../../types/types';
-import { PlusCircle, FileText, Image, File, MessageSquare, Loader, X, Upload } from 'lucide-react';
+import { PlusCircle, FileText, Loader, X, Search, Calendar, Plus } from 'lucide-react';
 import NoteItem from './NoteItem';
+import NoteDetails from './NoteDetails';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface NotesPanelProps {
   studentId: string;
   phaseId: string | null;
   taskId: string | null;
+  subtaskId?: string | null;
+  isDetailView?: boolean;
+  selectedNote?: Note | null;
+  isFileUpload?: boolean;
+  setIsDetailView?: (isDetailView: boolean) => void;
+  setSelectedNote?: (note: Note | null) => void;
+  onNoteSaved?: (note: Note) => void;
 }
 
-export default function NotesPanel({ studentId, phaseId, taskId }: NotesPanelProps) {
+export default function NotesPanel({ 
+  studentId, 
+  phaseId, 
+  taskId, 
+  subtaskId,
+  isDetailView = false,
+  selectedNote = null,
+  isFileUpload = false,
+  setIsDetailView = () => {},
+  setSelectedNote = () => {},
+  onNoteSaved = () => {}
+}: NotesPanelProps) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newNoteContent, setNewNoteContent] = useState('');
-  const [activeNoteType, setActiveNoteType] = useState<'text' | 'file' | 'image' | 'transcript'>('text');
-  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [noteDescription, setNoteDescription] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const contentEditableRef = useRef<HTMLDivElement>(null);
-
+  const [searchTerm, setSearchTerm] = useState('');
+  const [localIsDetailView, setLocalIsDetailView] = useState(isDetailView);
+  const [localSelectedNote, setLocalSelectedNote] = useState<Note | null>(selectedNote);
+  const [localIsFileUpload, setLocalIsFileUpload] = useState(isFileUpload);
+  
   useEffect(() => {
     fetchNotes();
-  }, [studentId, phaseId, taskId]);
+  }, [studentId, phaseId, taskId, subtaskId]);
 
-  // Clear preview and selected file when changing note type
+  // Sync local and parent state
   useEffect(() => {
-    setSelectedFile(null);
-    setPreviewUrl(null);
-    setNoteDescription('');
-  }, [activeNoteType]);
-
-  // Update contentEditable div when newNoteContent changes
-  useEffect(() => {
-    if (contentEditableRef.current && activeNoteType === 'text') {
-      // Only update the DOM if content is different to avoid cursor jumps
-      if (contentEditableRef.current.textContent !== newNoteContent) {
-        contentEditableRef.current.textContent = newNoteContent;
-      }
-    }
-  }, [newNoteContent, activeNoteType]);
+    setLocalIsDetailView(isDetailView);
+    setLocalSelectedNote(selectedNote);
+    setLocalIsFileUpload(isFileUpload);
+  }, [isDetailView, selectedNote, isFileUpload]);
 
   const fetchNotes = async () => {
     setLoading(true);
@@ -66,6 +71,10 @@ export default function NotesPanel({ studentId, phaseId, taskId }: NotesPanelPro
         query = query.eq('task_id', taskId);
       }
       
+      if (subtaskId) {
+        query = query.eq('subtask_id', subtaskId);
+      }
+      
       const { data, error } = await query;
       
       if (error) throw error;
@@ -78,155 +87,137 @@ export default function NotesPanel({ studentId, phaseId, taskId }: NotesPanelPro
     }
   };
 
-  const handleContentInput = (e: React.FormEvent<HTMLDivElement>) => {
-    setNewNoteContent(e.currentTarget.textContent || '');
+  const handleCreateNote = () => {
+    setLocalSelectedNote(null);
+    setLocalIsDetailView(true);
+    setLocalIsFileUpload(false);
+    setIsDetailView(true);
+    setSelectedNote(null);
   };
-
-  const createNote = async () => {
-    setError(null);
+  
+  const handleViewNote = (note: Note) => {
+    setLocalSelectedNote(note);
+    setLocalIsDetailView(true);
+    setLocalIsFileUpload(false);
+    setIsDetailView(true);
+    setSelectedNote(note);
+  };
+  
+  const handleCloseDetail = () => {
+    setLocalIsDetailView(false);
+    setLocalSelectedNote(null);
+    setLocalIsFileUpload(false);
+    setIsDetailView(false);
+    setSelectedNote(null);
+  };
+  
+  const handleSaveNote = (note: Note) => {
+    const isNewNote = !localSelectedNote?.id;
     
-    if (activeNoteType === 'text') {
-      if (!newNoteContent.trim()) return;
-      
-      setIsSaving(true);
-      try {
-        const noteData: Partial<Note> = {
-          student_id: studentId,
-          phase_id: phaseId || null,
-          task_id: taskId || null,
-          type: activeNoteType,
-          content: newNoteContent,
-        };
-        
-        const { data, error } = await supabase
-          .from('notes')
-          .insert(noteData)
-          .select()
-          .single();
-          
-        if (error) throw error;
-        
-        // Add new note to the list
-        setNotes([data as Note, ...notes]);
-        
-        // Clear the form
-        setNewNoteContent('');
-        if (contentEditableRef.current) {
-          contentEditableRef.current.textContent = '';
-        }
-      } catch (error) {
-        console.error('Error creating text note:', error);
-        setError('Failed to create note. Please try again.');
-      } finally {
-        setIsSaving(false);
-      }
-    } else if (selectedFile) {
-      await uploadFile(selectedFile);
+    if (isNewNote) {
+      // Add new note to list
+      setNotes([note, ...notes]);
     } else {
-      setError('Please select a file to upload.');
+      // Update existing note in list
+      setNotes(notes.map(n => n.id === note.id ? note : n));
     }
+    
+    setLocalIsDetailView(false);
+    setLocalSelectedNote(null);
+    setLocalIsFileUpload(false);
+    setIsDetailView(false);
+    setSelectedNote(null);
+    onNoteSaved(note);
   };
-
-  const uploadFile = async (file: File) => {
-    setIsSaving(true);
-    setError(null);
-    
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `${studentId}/${fileName}`;
-      
-      // Upload file to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('notes')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false,
-        });
-      
-      if (uploadError) throw uploadError;
-      
-      // Get public URL
-      const { data: urlData } = await supabase.storage
-        .from('notes')
-        .getPublicUrl(filePath);
-      
-      const publicUrl = urlData.publicUrl;
-      
-      // Create note record
-      const noteData: Partial<Note> = {
-        student_id: studentId,
-        phase_id: phaseId || null,
-        task_id: taskId || null,
-        type: activeNoteType,
-        file_url: publicUrl,
-        content: noteDescription || null, // Use description as content for file notes
-      };
-      
-      const { data: newNoteData, error: noteError } = await supabase
-        .from('notes')
-        .insert(noteData)
-        .select()
-        .single();
-      
-      if (noteError) throw noteError;
-      
-      // Add new note to the list
-      setNotes([newNoteData as Note, ...notes]);
-      
-      // Clear the form
-      setSelectedFile(null);
-      setPreviewUrl(null);
-      setNoteDescription('');
-      
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      setError('Failed to upload file. Please try again.');
-    } finally {
-      setIsSaving(false);
-    }
+  
+  const handleDeleteNote = (noteId: string) => {
+    setNotes(notes.filter(n => n.id !== noteId));
   };
+  
+  // Filter notes by search term
+  const filteredNotes = notes.filter(note => {
+    const searchContent = 
+      (note.title || '') + 
+      (note.content || '');
+    
+    return searchContent.toLowerCase().includes(searchTerm.toLowerCase());
+  });
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    setSelectedFile(file);
-    
-    // Create preview for images
-    if (activeNoteType === 'image' && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+  // Helper to get contextual details
+  const getContextText = () => {
+    if (subtaskId) {
+      return "for this subtask";
+    } else if (taskId) {
+      return "for this task";
+    } else if (phaseId) {
+      return "for this phase";
     } else {
-      setPreviewUrl(null);
+      return "for this student";
     }
   };
-
-  const handleBrowseFiles = () => {
-    fileInputRef.current?.click();
+  
+  // Group notes by date (today, yesterday, this week, earlier)
+  const groupNotesByDate = (notes: Note[]) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    const thisWeekStart = new Date(today);
+    thisWeekStart.setDate(thisWeekStart.getDate() - thisWeekStart.getDay());
+    
+    const grouped: Record<string, Note[]> = {
+      'Today': [],
+      'Yesterday': [],
+      'This Week': [],
+      'Earlier': [],
+    };
+    
+    notes.forEach(note => {
+      const noteDate = new Date(note.created_at);
+      noteDate.setHours(0, 0, 0, 0);
+      
+      if (noteDate.getTime() === today.getTime()) {
+        grouped['Today'].push(note);
+      } else if (noteDate.getTime() === yesterday.getTime()) {
+        grouped['Yesterday'].push(note);
+      } else if (noteDate > thisWeekStart) {
+        grouped['This Week'].push(note);
+      } else {
+        grouped['Earlier'].push(note);
+      }
+    });
+    
+    return Object.entries(grouped).filter(([_, notes]) => notes.length > 0);
   };
 
-  const clearFileSelection = () => {
-    setSelectedFile(null);
-    setPreviewUrl(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
+  // If in detail view, render NoteDetails component
+  if (localIsDetailView) {
+    return (
+      <NoteDetails
+        note={localSelectedNote}
+        studentId={studentId}
+        phaseId={phaseId}
+        taskId={taskId}
+        subtaskId={subtaskId || null}
+        onClose={handleCloseDetail}
+        onSave={handleSaveNote}
+        onDelete={handleDeleteNote}
+        isNewNote={!localSelectedNote?.id}
+        initialFileUpload={localIsFileUpload}
+      />
+    );
+  }
 
   return (
     <div className="p-6">
-      <h2 className="text-xl font-light mb-6 text-gray-800">Notes</h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-light text-gray-800">Notes {getContextText()}</h2>
+      </div>
       
       {error && (
-        <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg flex items-center justify-between">
+        <div className="mb-6 p-3 bg-red-50 text-red-700 text-sm rounded-lg flex items-center justify-between">
           <div className="flex items-center">
             <span className="mr-2">⚠️</span>
             {error}
@@ -237,186 +228,78 @@ export default function NotesPanel({ studentId, phaseId, taskId }: NotesPanelPro
         </div>
       )}
       
-      {/* Create Note Section */}
-      <motion.div 
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="mb-8 bg-white border border-gray-100 rounded-lg shadow-sm overflow-hidden"
-      >
-        <div className="flex border-b border-gray-100">
-          {[
-            { type: 'text', icon: FileText, label: 'Text' },
-            { type: 'file', icon: File, label: 'File' },
-            { type: 'image', icon: Image, label: 'Image' },
-            { type: 'transcript', icon: MessageSquare, label: 'Transcript' },
-          ].map(item => (
-            <button
-              key={item.type}
-              onClick={() => setActiveNoteType(item.type as any)}
-              className={`flex-1 py-3 text-sm font-medium transition-all duration-200 flex items-center justify-center ${
-                activeNoteType === item.type 
-                  ? 'text-gray-900 border-b-2 border-gray-800 bg-gray-50'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              <item.icon className="h-4 w-4 inline mr-2" />
-              {item.label}
-            </button>
-          ))}
+      {/* Search and Create */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mb-8">
+        <div className="relative flex-1">
+          <input
+            type="text"
+            placeholder="Search notes..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-300 bg-gray-50"
+          />
+          <Search className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
         </div>
         
-        <div className="p-4">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeNoteType}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              {activeNoteType === 'text' ? (
-                <div
-                  ref={contentEditableRef}
-                  contentEditable="true"
-                  className="w-full p-4 border border-gray-200 rounded-lg min-h-[120px] focus:outline-none focus:ring-1 focus:ring-gray-300 bg-gray-50 text-gray-700 overflow-auto"
-                  onInput={handleContentInput}
-                  suppressContentEditableWarning={true}
-                />
-              ) : (
-                <div>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    onChange={handleFileChange}
-                    accept={
-                      activeNoteType === 'image' 
-                        ? 'image/*' 
-                        : activeNoteType === 'transcript' 
-                          ? '.txt,.pdf,.doc,.docx' 
-                          : '*'
-                    }
-                  />
-                  
-                  {selectedFile ? (
-                    <div className="mb-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <h3 className="text-sm font-medium text-gray-700">Selected File:</h3>
-                        <button 
-                          onClick={clearFileSelection}
-                          className="text-gray-400 hover:text-gray-600"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                      
-                      {activeNoteType === 'image' && previewUrl ? (
-                        <div className="border rounded-lg overflow-hidden bg-gray-50 p-2">
-                          <img 
-                            src={previewUrl} 
-                            alt="Preview" 
-                            className="max-h-[200px] mx-auto rounded"
-                          />
-                          <p className="text-xs text-gray-500 mt-2 text-center">
-                            {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="flex items-center p-4 bg-gray-50 rounded-lg">
-                          <File className="h-8 w-8 text-gray-400 mr-3" />
-                          <div>
-                            <p className="text-sm font-medium text-gray-700">{selectedFile.name}</p>
-                            <p className="text-xs text-gray-500">
-                              {(selectedFile.size / 1024).toFixed(1)} KB • {selectedFile.type || 'Unknown type'}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                      
-                      <input
-                        type="text"
-                        placeholder="Add a description..."
-                        className="w-full p-3 mt-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-300 bg-gray-50 text-gray-700"
-                        value={noteDescription}
-                        onChange={(e) => setNoteDescription(e.target.value)}
-                      />
-                    </div>
-                  ) : (
-                    <div className="border-2 border-dashed border-gray-200 rounded-lg p-8 flex flex-col items-center bg-gray-50">
-                      <div className="mb-3">
-                        {activeNoteType === 'file' && <File className="h-12 w-12 text-gray-300" />}
-                        {activeNoteType === 'image' && <Image className="h-12 w-12 text-gray-300" />}
-                        {activeNoteType === 'transcript' && <MessageSquare className="h-12 w-12 text-gray-300" />}
-                      </div>
-                      <p className="text-sm text-gray-500 text-center mb-3">
-                        Drop your {activeNoteType} here or click to browse
-                      </p>
-                      <motion.button 
-                        whileHover={{ scale: 1.03 }}
-                        whileTap={{ scale: 0.97 }}
-                        onClick={handleBrowseFiles}
-                        className="mt-2 text-sm text-gray-700 bg-white hover:bg-gray-100 px-4 py-2 rounded-lg border border-gray-200 transition-all duration-200 flex items-center"
-                      >
-                        <Upload className="h-4 w-4 mr-2" />
-                        Browse files
-                      </motion.button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </motion.div>
-          </AnimatePresence>
-          
-          <div className="flex justify-end mt-4">
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={createNote}
-              disabled={
-                isSaving || 
-                (activeNoteType === 'text' && !newNoteContent.trim()) ||
-                (activeNoteType !== 'text' && !selectedFile)
-              }
-              className="flex items-center px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-            >
-              {isSaving ? (
-                <Loader className="animate-spin h-4 w-4 mr-2" />
-              ) : (
-                <PlusCircle className="h-4 w-4 mr-2" />
-              )}
-              Add Note
-            </motion.button>
-          </div>
+        <div className="flex gap-2">
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={handleCreateNote}
+            className="px-4 py-3 rounded-lg bg-gray-800 text-white flex items-center hover:bg-gray-700 transition-colors"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            New Note
+          </motion.button>
         </div>
-      </motion.div>
+      </div>
       
       {/* Notes List */}
-      <div className="space-y-5">
+      <div>
         {loading ? (
           <div className="flex justify-center py-10">
             <Loader className="animate-spin h-8 w-8 text-gray-300" />
           </div>
-        ) : notes.length > 0 ? (
-          <AnimatePresence>
-            {notes.map((note, index) => (
-              <motion.div
-                key={note.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
-              >
-                <NoteItem note={note} />
-              </motion.div>
+        ) : filteredNotes.length > 0 ? (
+          <div className="space-y-8">
+            {groupNotesByDate(filteredNotes).map(([dateGroup, groupNotes]) => (
+              <div key={dateGroup}>
+                <h3 className="text-sm font-medium text-gray-500 mb-4 flex items-center">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  {dateGroup}
+                </h3>
+                <div className="space-y-4">
+                  {groupNotes.map((note) => (
+                    <motion.div
+                      key={note.id}
+                      whileHover={{ y: -2 }}
+                      transition={{ duration: 0.2 }}
+                      onClick={() => handleViewNote(note)}
+                      className="cursor-pointer"
+                    >
+                      <NoteItem note={note} />
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
             ))}
-          </AnimatePresence>
+          </div>
         ) : (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-12"
+            className="text-center py-12 bg-gray-50 rounded-lg border border-gray-100"
           >
-            <p className="text-gray-400">No notes yet. Create your first note above.</p>
+            <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-gray-600 font-medium mb-1">No notes yet</h3>
+            <p className="text-gray-500 mb-5">Create your first note to get started</p>
+            <button
+              onClick={handleCreateNote}
+              className="mx-auto px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 flex items-center justify-center"
+            >
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Add Note
+            </button>
           </motion.div>
         )}
       </div>

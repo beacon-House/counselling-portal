@@ -152,6 +152,7 @@ export interface Database {
           name: string
           status: string | null
           created_at: string | null
+          remark: string | null
         }
         Insert: {
           id?: string
@@ -160,6 +161,7 @@ export interface Database {
           name: string
           status?: string | null
           created_at?: string | null
+          remark?: string | null
         }
         Update: {
           id?: string
@@ -168,6 +170,7 @@ export interface Database {
           name?: string
           status?: string | null
           created_at?: string | null
+          remark?: string | null
         }
         Relationships: [
           {

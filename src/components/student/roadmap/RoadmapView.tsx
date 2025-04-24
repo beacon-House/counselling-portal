@@ -3,11 +3,12 @@
  * Displays the student's progress through the roadmap
  */
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Phase, Task, Subtask } from '../../../types/types';
 import { supabase } from '../../../lib/supabase';
 import CreateSubtaskModal from './CreateSubtaskModal';
 import SubtaskList from './SubtaskList';
+import TaskItem from './TaskItem';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface RoadmapViewProps {
@@ -17,6 +18,7 @@ interface RoadmapViewProps {
   activeTaskId: string | null;
   setActivePhaseId: (id: string | null) => void;
   setActiveTaskId: (id: string | null) => void;
+  onOpenFab: (phaseId: string | null, taskId: string | null, subtaskId?: string | null) => void;
 }
 
 export default function RoadmapView({ 
@@ -25,7 +27,8 @@ export default function RoadmapView({
   activePhaseId,
   activeTaskId, 
   setActivePhaseId,
-  setActiveTaskId
+  setActiveTaskId,
+  onOpenFab
 }: RoadmapViewProps) {
   const [expandedPhases, setExpandedPhases] = useState<Record<string, boolean>>({});
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});
@@ -154,59 +157,19 @@ export default function RoadmapView({
                 >
                   <div className="pl-10 pr-4 pb-4 pt-1">
                     {phase.tasks.map(task => (
-                      <div key={task.id} className="mt-2">
-                        <motion.div 
-                          className={`flex justify-between items-center p-3 cursor-pointer rounded-lg transition-colors duration-200 ${
-                            activeTaskId === task.id ? 'bg-gray-100' : 'hover:bg-gray-50'
-                          }`}
-                          onClick={() => toggleTask(task.id, phase.id)}
-                          whileHover={{ backgroundColor: "rgb(243 244 246)" }}
-                        >
-                          <div className="flex items-center">
-                            <motion.div
-                              initial={false}
-                              animate={{ rotate: expandedTasks[task.id] ? 90 : 0 }}
-                              transition={{ duration: 0.2 }}
-                            >
-                              <ChevronRight className="h-4 w-4 text-gray-400 mr-2" />
-                            </motion.div>
-                            <span className="text-gray-700">{task.sequence}. {task.name}</span>
-                          </div>
-                          
-                          <motion.button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openCreateSubtaskModal(task.id);
-                            }}
-                            className="p-1 rounded-full hover:bg-gray-200 transition-colors duration-200"
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                          >
-                            <Plus className="h-3.5 w-3.5 text-gray-500" />
-                          </motion.button>
-                        </motion.div>
-                        
-                        <AnimatePresence>
-                          {expandedTasks[task.id] && (
-                            <motion.div 
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: "auto", opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.2 }}
-                              className="overflow-hidden"
-                            >
-                              <div className="pl-9 mt-1 ml-2">
-                                <SubtaskList 
-                                  subtasks={subtasks[task.id] || []} 
-                                  studentId={studentId} 
-                                  taskId={task.id}
-                                  onSubtaskUpdate={fetchAllSubtasks}
-                                />
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
+                      <TaskItem
+                        key={task.id}
+                        task={task}
+                        isActive={activeTaskId === task.id}
+                        isExpanded={!!expandedTasks[task.id]}
+                        phaseId={phase.id}
+                        studentId={studentId}
+                        subtasks={subtasks[task.id] || []}
+                        onToggleTask={() => toggleTask(task.id, phase.id)}
+                        onOpenSubtaskModal={openCreateSubtaskModal}
+                        onSubtaskUpdate={fetchAllSubtasks}
+                        onOpenFab={onOpenFab}
+                      />
                     ))}
                   </div>
                 </motion.div>

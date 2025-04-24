@@ -1,16 +1,57 @@
 /**
- * Note item component for displaying a single note
+ * Note item component for displaying a single note in the list view
  */
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Note } from '../../../types/types';
-import { FileText, Image, File, MessageSquare, Clock, Download, ExternalLink } from 'lucide-react';
+import { FileText, Image, File, MessageSquare, Clock, ExternalLink } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { supabase } from '../../../lib/supabase';
 
 interface NoteItemProps {
   note: Note;
 }
 
 export default function NoteItem({ note }: NoteItemProps) {
+  const [imageUrl, setImageUrl] = useState<string | null>(note.file_url || null);
+
+  // Refresh the public URL when component mounts or note changes
+  useEffect(() => {
+    if (note.type === 'image' && note.file_url) {
+      getPublicUrl(note.file_url);
+    } else {
+      setImageUrl(note.file_url);
+    }
+  }, [note]);
+
+  // Generate a fresh public URL from the Supabase storage path
+  const getPublicUrl = async (fileUrl: string) => {
+    try {
+      // Extract the path from the URL
+      const url = new URL(fileUrl);
+      const pathMatch = url.pathname.match(/\/storage\/v1\/object\/public\/notes\/(.*)/);
+      
+      if (pathMatch && pathMatch[1]) {
+        const filePath = pathMatch[1];
+        
+        // Get fresh public URL
+        const { data } = await supabase.storage
+          .from('notes')
+          .getPublicUrl(filePath);
+        
+        if (data?.publicUrl) {
+          setImageUrl(data.publicUrl);
+        }
+      } else {
+        // If we can't extract the path, use the original URL
+        setImageUrl(fileUrl);
+      }
+    } catch (error) {
+      console.error('Error refreshing public URL:', error);
+      // Fallback to original URL
+      setImageUrl(fileUrl);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString() + ' at ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -47,119 +88,99 @@ export default function NoteItem({ note }: NoteItemProps) {
     }
   };
 
+  // Get a short preview of the content
+  const getContentPreview = (content: string, maxLength: number = 120) => {
+    if (!content) return '';
+    if (content.length <= maxLength) return content;
+    return content.substring(0, maxLength) + '...';
+  };
+
   return (
-    <motion.div 
-      className="bg-white border border-gray-100 rounded-lg p-5 shadow-sm"
-      whileHover={{ y: -2, boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)" }}
-      transition={{ duration: 0.2 }}
-    >
+    <div className="bg-white border border-gray-100 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-start">
-        <div className="mr-4 mt-1">
+        <div className="mr-4 mt-1 flex-shrink-0">
           {getNoteIcon()}
         </div>
         
-        <div className="flex-1">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs text-gray-400 flex items-center">
-              <Clock className="h-3 w-3 mr-1" />
-              {note.created_at ? formatDate(note.created_at) : 'Just now'}
-            </span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              {note.title ? (
+                <h3 className="font-medium text-gray-800 mb-1 line-clamp-1">{note.title}</h3>
+              ) : (
+                <h3 className="font-medium text-gray-800 mb-1 line-clamp-1">
+                  {note.type === 'text' 
+                    ? (note.content?.split('\n')[0]?.trim() || 'Untitled Note')
+                    : note.type === 'file' || note.type === 'transcript'
+                      ? (note.file_url ? getFileName(note.file_url) : 'Untitled File')
+                      : 'Untitled Note'
+                  }
+                </h3>
+              )}
+              <div className="text-xs text-gray-400 flex items-center">
+                <Clock className="h-3 w-3 mr-1" />
+                {note.created_at ? formatDate(note.created_at) : 'Just now'}
+              </div>
+            </div>
+            
+            {note.type === 'image' && imageUrl && (
+              <div className="ml-4 flex-shrink-0 w-16 h-16 bg-gray-100 rounded overflow-hidden">
+                <img 
+                  src={imageUrl} 
+                  alt="" 
+                  className="w-full h-full object-cover" 
+                  loading="lazy"
+                  onError={(e) => {
+                    console.error('Image failed to load, refreshing URL');
+                    if (note.file_url) getPublicUrl(note.file_url);
+                    e.currentTarget.onerror = null; // Prevent infinite loop
+                  }}
+                />
+              </div>
+            )}
           </div>
           
-          <div className="prose prose-sm max-w-none text-gray-700">
-            {note.type === 'text' && note.content && (
-              <p className="whitespace-pre-wrap leading-relaxed">{note.content}</p>
-            )}
-            
-            {note.type === 'image' && note.file_url && (
-              <div>
-                <img 
-                  src={note.file_url} 
-                  alt="Note" 
-                  className="max-w-full rounded-md" 
-                  loading="lazy"
-                />
-                {note.content && (
-                  <p className="mt-3 text-gray-600 text-sm">{note.content}</p>
-                )}
-              </div>
-            )}
-            
-            {note.type === 'file' && note.file_url && (
-              <div className="flex flex-col">
-                <div className="flex items-center p-4 bg-gray-50 rounded-lg">
-                  <File className="h-6 w-6 text-gray-400 mr-3 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{getFileName(note.file_url)}</p>
-                    <div className="flex mt-2 space-x-3">
-                      <a 
-                        href={note.file_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-xs text-blue-600 hover:underline flex items-center"
-                        download
-                      >
-                        <Download className="h-3 w-3 mr-1" />
-                        Download
-                      </a>
-                      <a 
-                        href={note.file_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-xs text-blue-600 hover:underline flex items-center"
-                      >
-                        <ExternalLink className="h-3 w-3 mr-1" />
-                        View
-                      </a>
-                    </div>
-                  </div>
-                </div>
-                {note.content && (
-                  <p className="mt-3 text-gray-600 text-sm">{note.content}</p>
-                )}
-              </div>
-            )}
-            
-            {note.type === 'transcript' && note.file_url && (
-              <div className="flex flex-col">
-                <div className="p-2 bg-gray-50 rounded-md mb-3">
-                  <p className="text-xs font-medium text-gray-600">Transcript</p>
-                </div>
-                <div className="flex items-center p-4 bg-gray-50 rounded-lg">
-                  <MessageSquare className="h-6 w-6 text-gray-400 mr-3 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{getFileName(note.file_url)}</p>
-                    <div className="flex mt-2 space-x-3">
-                      <a 
-                        href={note.file_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-xs text-blue-600 hover:underline flex items-center"
-                        download
-                      >
-                        <Download className="h-3 w-3 mr-1" />
-                        Download
-                      </a>
-                      <a 
-                        href={note.file_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-xs text-blue-600 hover:underline flex items-center"
-                      >
-                        <ExternalLink className="h-3 w-3 mr-1" />
-                        View
-                      </a>
-                    </div>
-                  </div>
-                </div>
-                {note.content && (
-                  <p className="mt-3 text-gray-600 text-sm">{note.content}</p>
-                )}
-              </div>
-            )}
-          </div>
+          {note.type === 'text' && note.content && (
+            <p className="text-gray-600 text-sm line-clamp-2">
+              {getContentPreview(note.content)}
+            </p>
+          )}
+          
+          {note.type !== 'text' && note.content && (
+            <p className="text-gray-600 text-sm line-clamp-2">
+              {getContentPreview(note.content)}
+            </p>
+          )}
+          
+          {note.type === 'image' && imageUrl && (
+            <div className="text-xs text-gray-500 flex items-center">
+              <Image className="h-3 w-3 mr-1" />
+              <span>Image attachment</span>
+              {note.file_url && (
+                <a 
+                  href={imageUrl}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="ml-2 text-blue-500 hover:underline flex items-center"
+                >
+                  <ExternalLink className="h-3 w-3 mr-1" />
+                  View
+                </a>
+              )}
+            </div>
+          )}
+          
+          {note.type !== 'text' && note.type !== 'image' && note.file_url && (
+            <div className="text-xs text-gray-500">
+              {note.type === 'file' || note.type === 'transcript' 
+                ? `File: ${getFileName(note.file_url)}`
+                : 'Attachment'
+              }
+            </div>
+          )}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

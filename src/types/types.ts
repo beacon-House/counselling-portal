@@ -35,6 +35,7 @@ export interface Subtask {
   task_id: string;
   status: SubtaskStatus;
   created_at: string;
+  remark?: string;
 }
 
 export interface Student {
@@ -49,6 +50,9 @@ export interface Student {
   created_at: string;
   counsellor_id: string;
   phases?: Phase[];
+  counsellors?: {
+    name: string;
+  };
 }
 
 export interface Note {
@@ -61,4 +65,5 @@ export interface Note {
   type: NoteType;
   file_url?: string;
   created_at: string;
+  title?: string;
 }

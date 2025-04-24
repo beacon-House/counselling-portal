@@ -5,11 +5,19 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { Student, Phase, Task } from '../../types/types';
+import { Student, Phase, Task, Note } from '../../types/types';
 import RoadmapView from './roadmap/RoadmapView';
 import NotesPanel from './notes/NotesPanel';
 import StudentHeader from './StudentHeader';
+import FloatingActionButton from './FloatingActionButton';
 import { motion } from 'framer-motion';
+
+interface SelectedContext {
+  phaseId: string | null;
+  taskId: string | null;
+  subtaskId: string | null;
+  name: string;
+}
 
 export default function StudentView() {
   const { studentId } = useParams<{ studentId: string }>();
@@ -20,6 +28,21 @@ export default function StudentView() {
   const [error, setError] = useState<string | null>(null);
   const [activePhaseId, setActivePhaseId] = useState<string | null>(null);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [activeSubtaskId, setActiveSubtaskId] = useState<string | null>(null);
+  
+  // Detail view state for notes
+  const [isDetailView, setIsDetailView] = useState(false);
+  const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+  const [isFileUpload, setIsFileUpload] = useState(false);
+  
+  // FAB state
+  const [isFabOpen, setIsFabOpen] = useState(false);
+  const [selectedContext, setSelectedContext] = useState<SelectedContext>({
+    phaseId: null,
+    taskId: null,
+    subtaskId: null,
+    name: '',
+  });
 
   useEffect(() => {
     if (!studentId) return;
@@ -70,10 +93,89 @@ export default function StudentView() {
   }, [studentId]);
 
   // Organize tasks by phase
-  const phasesWithTasks = phases.map(phase => ({
-    ...phase,
-    tasks: tasks.filter(task => task.phase_id === phase.id)
-  }));
+  const phasesWithTasks = React.useMemo(() => {
+    return phases.map(phase => ({
+      ...phase,
+      tasks: tasks.filter(task => task.phase_id === phase.id)
+    }));
+  }, [phases, tasks]);
+
+  // Function to update selected context for FAB
+  const setContext = (phaseId: string | null, taskId: string | null, subtaskId: string | null = null) => {
+    let contextName = '';
+    
+    if (subtaskId) {
+      const phase = phases.find(p => p.id === phaseId);
+      const task = tasks.find(t => t.id === taskId);
+      if (phase && task) {
+        contextName = `${phase.name} > ${task.name} > Subtask`;
+      }
+    } else if (taskId) {
+      const phase = phases.find(p => p.id === phaseId);
+      const task = tasks.find(t => t.id === taskId);
+      if (phase && task) {
+        contextName = `${phase.name} > ${task.name}`;
+      }
+    } else if (phaseId) {
+      const phase = phases.find(p => p.id === phaseId);
+      if (phase) {
+        contextName = phase.name;
+      }
+    } else {
+      contextName = student?.name || 'Student';
+    }
+    
+    setSelectedContext({
+      phaseId,
+      taskId,
+      subtaskId,
+      name: contextName
+    });
+  };
+  
+  // Handle opening the FAB
+  const handleOpenFab = (phaseId: string | null, taskId: string | null, subtaskId: string | null = null) => {
+    setContext(phaseId, taskId, subtaskId);
+    setIsFabOpen(true);
+  };
+  
+  // Handle adding a note from the FAB
+  const handleAddNote = () => {
+    setActivePhaseId(selectedContext.phaseId);
+    setActiveTaskId(selectedContext.taskId);
+    setActiveSubtaskId(selectedContext.subtaskId);
+    setIsDetailView(true);
+    setIsFileUpload(false);
+    setSelectedNote(null);
+    setIsFabOpen(false);
+  };
+  
+  // Handle uploading a file from the FAB
+  const handleUploadFile = () => {
+    setActivePhaseId(selectedContext.phaseId);
+    setActiveTaskId(selectedContext.taskId);
+    setActiveSubtaskId(selectedContext.subtaskId);
+    setIsDetailView(true);
+    setIsFileUpload(true);
+    setSelectedNote(null);
+    setIsFabOpen(false);
+  };
+
+  // Handle note being saved
+  const handleNoteSaved = (note: Note) => {
+    setIsDetailView(false);
+    setSelectedNote(null);
+    setIsFileUpload(false);
+  };
+
+  // Get contextual text for FAB menu
+  const getContextText = () => {
+    if (!selectedContext.phaseId) {
+      return `Add note for ${student?.name || 'Student'}`;
+    }
+    
+    return `Add note to: ${selectedContext.name}`;
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -103,6 +205,7 @@ export default function StudentView() {
                 activeTaskId={activeTaskId}
                 setActivePhaseId={setActivePhaseId}
                 setActiveTaskId={setActiveTaskId}
+                onOpenFab={handleOpenFab}
               />
             </motion.div>
             
@@ -116,9 +219,25 @@ export default function StudentView() {
                 studentId={studentId || ''} 
                 phaseId={activePhaseId} 
                 taskId={activeTaskId}
+                subtaskId={activeSubtaskId}
+                isDetailView={isDetailView}
+                selectedNote={selectedNote}
+                isFileUpload={isFileUpload}
+                setIsDetailView={setIsDetailView}
+                setSelectedNote={setSelectedNote}
+                onNoteSaved={handleNoteSaved}
               />
             </motion.div>
           </div>
+          
+          {/* Floating Action Button */}
+          <FloatingActionButton 
+            isOpen={isFabOpen}
+            toggleOpen={() => setIsFabOpen(!isFabOpen)}
+            onAddNote={handleAddNote}
+            onUploadFile={handleUploadFile}
+            contextText={getContextText()}
+          />
         </>
       ) : (
         <div className="flex-1 flex justify-center items-center">

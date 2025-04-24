@@ -83,21 +83,24 @@ This document provides a comprehensive overview of all files in the Beacon House
 | `src/components/student/StudentView.tsx` | StudentView | Main student dashboard view | React Router, Supabase, RoadmapView, NotesPanel, Framer Motion |
 | `src/components/student/StudentHeader.tsx` | StudentHeader | Header showing student information | Supabase, Lucide, Framer Motion |
 | `src/components/student/CreateStudent.tsx` | CreateStudent | Form to create new students | React Router, useAuth, Supabase, Lucide, Framer Motion |
+| `src/components/student/FloatingActionButton.tsx` | FloatingActionButton | Contextual floating action button for adding notes | Lucide, Framer Motion |
 
 #### Roadmap Components
 
 | File Path | Components | Purpose | Dependencies |
 |-----------|------------|---------|-------------|
 | `src/components/student/roadmap/RoadmapView.tsx` | RoadmapView | Displays the student roadmap structure | Supabase, CreateSubtaskModal, SubtaskList, Framer Motion |
-| `src/components/student/roadmap/SubtaskList.tsx` | SubtaskList | Lists and manages subtasks for a task | Supabase, Lucide, Framer Motion |
+| `src/components/student/roadmap/SubtaskList.tsx` | SubtaskList, RemarkModal | Lists and manages subtasks with status remarks | Supabase, Lucide, Framer Motion |
 | `src/components/student/roadmap/CreateSubtaskModal.tsx` | CreateSubtaskModal | Modal for creating new subtasks | Supabase, Lucide, Framer Motion |
+| `src/components/student/roadmap/TaskItem.tsx` | TaskItem | Individual task item with expand/collapse functionality | Supabase, Lucide, Framer Motion |
 
 #### Notes Components
 
 | File Path | Components | Purpose | Dependencies |
 |-----------|------------|---------|-------------|
-| `src/components/student/notes/NotesPanel.tsx` | NotesPanel | Panel for adding and viewing notes | Supabase, NoteItem, Lucide, Framer Motion |
-| `src/components/student/notes/NoteItem.tsx` | NoteItem | Individual note display component | Lucide, Framer Motion |
+| `src/components/student/notes/NotesPanel.tsx` | NotesPanel | Panel for adding and viewing notes with file upload capabilities | Supabase, NoteItem, Lucide, Framer Motion |
+| `src/components/student/notes/NoteItem.tsx` | NoteItem | Individual note display component with support for different note types (text, file, image, transcript) | Lucide, Framer Motion |
+| `src/components/student/notes/NoteDetails.tsx` | NoteDetails | Full-screen editor for creating and editing notes | Supabase, Lucide, Framer Motion |
 
 ### Documentation Files
 
@@ -128,17 +131,37 @@ This document provides a comprehensive overview of all files in the Beacon House
 - **StudentView**: Main dashboard for a student with roadmap and notes
 - **StudentHeader**: Displays student information and context summary
 - **CreateStudent**: Form for adding new students to the system
+- **FloatingActionButton**: Contextual button for adding notes to specific portions of the roadmap
 
 ### Roadmap
 
 - **RoadmapView**: Hierarchical display of phases, tasks, and subtasks
-- **SubtaskList**: Manages the status and display of subtasks
+- **SubtaskList**: Manages the status and display of subtasks with remarks
+  - **RemarkModal**: Modal for adding remarks when changing subtask status
 - **CreateSubtaskModal**: Interface for adding new subtasks to a task
+- **TaskItem**: Individual task display with expandable subtask list
 
 ### Notes
 
-- **NotesPanel**: Interface for creating and viewing notes attached to students/phases/tasks
-- **NoteItem**: Display component for different note types (text, file, image, transcript)
+- **NotesPanel**: Enhanced interface for creating and viewing notes with support for text, file, image, and transcript note types
+  - Text entry with canvas-style editing
+  - File upload with preview and description
+  - Image upload with preview and description
+  - Transcript upload with preview and description
+  - Error handling and loading indicators
+  - Drag-and-drop interface for file uploads
+- **NoteItem**: Display component for different note types with extended functionality
+  - Text note display with proper formatting
+  - Image display with lazy loading
+  - File display with download and view options
+  - Transcript display with specialized formatting
+  - File name extraction and formatting
+- **NoteDetails**: Full-screen editor for creating and editing notes
+  - Rich text editing for text notes
+  - File upload and preview
+  - Image upload and preview
+  - Metadata editing (title, description)
+  - File replacement functionality
 
 ## Dependencies
 
@@ -169,8 +192,12 @@ The application is a functional counsellor portal for managing student progress 
 - Authentication system
 - Student management (create, view, search)
 - Roadmap navigation and tracking
-- Custom subtask management with status tracking
-- Notes system for text entry with placeholders for file/image uploads
+- Custom subtask management with status tracking and remarks
+- Enhanced notes system with multiple content types:
+  - Text entry with canvas-style editing
+  - File uploads with preview and description
+  - Image uploads with preview and description
+  - Transcript uploads with specialized formatting
 - Responsive design with mobile adaptations
 - Animations for UI interactions
 

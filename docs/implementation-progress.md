@@ -28,16 +28,22 @@ This document tracks the current implementation status of the Beacon House Couns
 ### Subtask Management
 - Custom subtask creation for each task
 - Status management for subtasks (with 5 available statuses)
-- Status updates via dropdown menu
+- Status updates via dropdown menu with remark/comment capability
 - Visual indicators for different statuses
 - Proper data associations (student-task-subtask)
+- Remarks/comments associated with status changes
+- Display of remarks in expandable view
 
 ### Notes Interface
-- Basic notes system with text entry
-- Notes display at student/phase/task level
-- Different note types UI (text, file, image, transcript)
+- Enhanced notes system with text entry, file uploads, image uploads, and transcript uploads
+- Canvas-style editing for text notes with proper input handling
+- File upload system with drag-and-drop interface and file browser
+- Image preview for image notes with description capability
+- File metadata display and download/view options
+- Transcript handling with specialized formatting
+- Error handling and loading indicators
 - Chronological display of notes with timestamps
-- Note type filtering
+- Note type filtering via tabs
 
 ### Layout & Navigation
 - Three-panel layout as specified in PRD
@@ -48,17 +54,11 @@ This document tracks the current implementation status of the Beacon House Couns
 
 ## 🔄 Work in Progress
 
-### File Upload System
-- UI for file, image, and transcript uploads exists
-- Drag and drop interface available in the notes panel
-- Backend storage integration partially implemented
-- Need to complete actual upload functionality and processing
-
 ### Notes Enhancement
-- Basic version of notes implemented
-- Need to enhance with canvas-style editing capabilities
+- Further enhancing the canvas-style editing capabilities
+- Additional rich content features beyond basic text and file uploads
 - Linking notes to specific subtasks is partially implemented
-- Adding rich content to notes (beyond basic text)
+- OCR/NLP processing of uploaded files
 
 ### Student Context Summary
 - UI for context summary generation exists
@@ -111,12 +111,22 @@ This document tracks the current implementation status of the Beacon House Couns
   - students
   - phases
   - tasks
-  - student_subtasks
+  - student_subtasks (with added remark column for status context)
   - notes
   - note_embeddings (prepared for AI embeddings)
+
+### File Upload System
+- Supabase Storage integration for file uploads
+- File name handling with unique identifiers
+- File type detection and appropriate UI display
+- Preview generation for images
+- File metadata display (name, size, type)
+- Download and view options for all file types
 
 ### Frontend Architecture
 - React with TypeScript
 - Tailwind CSS for styling
 - React Router for navigation
 - Component structure follows feature-based organization
+- Canvas-style editing for text notes
+- Framer Motion for smooth transitions and animations
