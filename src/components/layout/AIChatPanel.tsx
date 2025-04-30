@@ -1,13 +1,14 @@
 /**
  * AI Chat Panel component
  * Provides a chat interface for counsellors to interact with AI and tag students
- * Uses Gemini API for contextual responses and student data analysis
+ * Uses OpenAI API for contextual responses and student data analysis
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, User, X, Search, Bot, Smile, AtSign } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../lib/supabase';
 import { Student, Note, Subtask } from '../../types/types';
+import OpenAI from 'openai';
 
 interface Message {
   id: string;
@@ -53,6 +54,19 @@ export default function AIChatPanel() {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const openai = useRef<OpenAI | null>(null);
+  
+  // Initialize OpenAI client
+  useEffect(() => {
+    if (!openai.current) {
+      const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+      if (!apiKey) {
+        console.error('OpenAI API key is missing');
+        return;
+      }
+      openai.current = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
+    }
+  }, []);
 
   // Scroll to bottom when new messages are added
   useEffect(() => {
@@ -277,9 +291,13 @@ export default function AIChatPanel() {
     }
   };
 
-  // Generate AI response using Gemini API
+  // Generate AI response using OpenAI API
   const getAIResponse = async (query: string, studentMentions: MentionedStudent[]) => {
     try {
+      if (!openai.current) {
+        throw new Error('OpenAI client not initialized');
+      }
+      
       let systemPrompt = `You are an AI assistant for a school counsellor portal. 
 You provide helpful, clear, and concise responses to counsellors' questions about students, 
 their progress, and academic tasks. Keep your answers factual and based on the available data.
@@ -329,60 +347,56 @@ progress, and recent notes if available.`;
         }
       }
       
-      // Prepare the messages for Gemini API
-      // Add system prompt as the first message if it's a new conversation
-      let updatedContext = { ...conversationContext };
-      
       // Limit conversation history to latest 5 messages for token management
       const recentMessages = conversationContext.messages.slice(-5);
       
-      // Add the current user query
-      const currentMessages = [
-        ...recentMessages,
-        { 
-          role: 'user', 
-          parts: [{ text: systemPrompt + studentDataContext + "\n\nUser query: " + query }] 
+      // Convert messages to OpenAI format
+      const messages = [
+        {
+          role: 'system',
+          content: systemPrompt + studentDataContext
+        },
+        ...recentMessages.map(msg => ({
+          role: msg.role === 'user' ? 'user' : 'assistant',
+          content: msg.parts[0].text
+        })),
+        {
+          role: 'user',
+          content: query
         }
       ];
-      
-      updatedContext = {
-        messages: currentMessages,
-        studentData: newContextData
-      };
-      
-      // Call Gemini API
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-      
-      const requestBody = {
-        contents: currentMessages
-      };
-      
-      console.log('Sending to Gemini API:', requestBody);
-      
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(requestBody)
+
+      const response = await openai.current.chat.completions.create({
+        model: 'gpt-4o',
+        messages,
+        temperature: 0.7,
+        max_tokens: 2000
       });
       
-      if (!response.ok) {
-        throw new Error(`API request failed with status ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
       // Extract the AI's response
-      const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || null;
+      const aiResponse = response.choices[0]?.message?.content || null;
       
-      // Update conversation context with AI response
+      // Update conversation context with user query and AI response
       if (aiResponse) {
+        const updatedContext = { ...conversationContext };
+        
+        // Add user query
+        updatedContext.messages.push({
+          role: 'user',
+          parts: [{ text: query }]
+        });
+        
+        // Add AI response
         updatedContext.messages.push({
           role: 'model',
           parts: [{ text: aiResponse }]
         });
+        
+        // Update student data
+        updatedContext.studentData = {
+          ...(conversationContext.studentData || {}),
+          ...newContextData
+        };
         
         setConversationContext(updatedContext);
       }
@@ -390,7 +404,7 @@ progress, and recent notes if available.`;
       return aiResponse;
     } catch (error) {
       console.error('Error getting AI response:', error);
-      return "I'm sorry, I encountered an error while processing your request. Please try again.";
+      throw error;
     }
   };
 

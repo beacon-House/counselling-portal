@@ -3,10 +3,11 @@
  * Displays a task with expand/collapse functionality and subtask management
  */
 import React, { useState } from 'react';
-import { ChevronRight, Plus } from 'lucide-react';
+import { ChevronRight, Plus, Loader } from 'lucide-react';
 import { Task, Subtask } from '../../../types/types';
 import SubtaskList from './SubtaskList';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '../../../lib/supabase';
 
 interface TaskItemProps {
   task: Task;
@@ -16,7 +17,7 @@ interface TaskItemProps {
   studentId: string;
   subtasks: Subtask[];
   onToggleTask: () => void;
-  onOpenSubtaskModal: (taskId: string) => void;
+  onOpenSubtaskModal: (taskId: string) => void; // Keeping for backward compatibility
   onSubtaskUpdate: () => void;
   onOpenFab: (phaseId: string, taskId: string, subtaskId?: string | null) => void;
 }
@@ -29,11 +30,37 @@ export default function TaskItem({
   studentId,
   subtasks,
   onToggleTask,
-  onOpenSubtaskModal,
   onSubtaskUpdate,
   onOpenFab
 }: TaskItemProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const [isCreatingSubtask, setIsCreatingSubtask] = useState(false);
+
+  // Function to create a new subtask inline
+  const createNewSubtask = async () => {
+    setIsCreatingSubtask(true);
+    try {
+      const { data, error } = await supabase
+        .from('student_subtasks')
+        .insert({
+          name: "New Subtask", // Default name
+          student_id: studentId,
+          task_id: task.id,
+          status: 'yet_to_start'
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      // Refresh subtasks after creating a new one
+      onSubtaskUpdate();
+    } catch (err) {
+      console.error('Error creating subtask:', err);
+    } finally {
+      setIsCreatingSubtask(false);
+    }
+  };
 
   return (
     <div key={task.id} className="mt-2">
@@ -56,31 +83,6 @@ export default function TaskItem({
           </motion.div>
           <span className="text-gray-700">{task.sequence}. {task.name}</span>
         </div>
-        
-        {/* Add Subtask button - visible on hover */}
-        <AnimatePresence>
-          {isHovered && (
-            <motion.button 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.1 }}
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpenSubtaskModal(task.id);
-              }}
-              className="p-1 rounded-full hover:bg-gray-200 transition-colors duration-200 group relative"
-              title="Add subtask"
-            >
-              <Plus className="h-3.5 w-3.5 text-gray-500 group-hover:text-gray-700" />
-              
-              {/* Tooltip */}
-              <span className="absolute right-full mr-2 whitespace-nowrap bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                Add subtask
-              </span>
-            </motion.button>
-          )}
-        </AnimatePresence>
       </motion.div>
       
       <AnimatePresence>
@@ -93,6 +95,7 @@ export default function TaskItem({
             className="overflow-hidden"
           >
             <div className="pl-9 mt-1 ml-2">
+              {/* Subtasks List */}
               <SubtaskList 
                 subtasks={subtasks || []} 
                 studentId={studentId} 
@@ -100,6 +103,30 @@ export default function TaskItem({
                 onSubtaskUpdate={onSubtaskUpdate}
                 onOpenFab={(subtaskId) => onOpenFab(phaseId, task.id, subtaskId)}
               />
+              
+              {/* Add Subtask Button - Always visible within expanded task */}
+              <div className="mt-3 flex justify-start">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    createNewSubtask();
+                  }}
+                  disabled={isCreatingSubtask}
+                  className="flex items-center px-3 py-1.5 text-sm bg-gray-800 hover:bg-gray-700 text-white rounded-md transition-colors shadow-sm"
+                >
+                  {isCreatingSubtask ? (
+                    <>
+                      <Loader className="h-3.5 w-3.5 mr-1.5 text-white animate-spin" />
+                      <span>Adding...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-3.5 w-3.5 mr-1.5" />
+                      <span>Add Subtask</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </motion.div>
         )}

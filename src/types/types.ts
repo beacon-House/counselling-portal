@@ -36,6 +36,8 @@ export interface Subtask {
   status: SubtaskStatus;
   created_at: string;
   remark?: string;
+  eta?: string; // timestamp for expected completion date
+  owner?: string; // text field for owner name
 }
 
 export interface Student {

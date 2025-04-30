@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { Note } from '../../../types/types';
-import { FileText, MessageSquare, Clock, User, Pencil } from 'lucide-react';
+import { FileText, MessageSquare, Clock, User, Pencil, FileType } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface NoteItemProps {
@@ -47,7 +47,9 @@ export default function NoteItem({ note, onEdit }: NoteItemProps) {
   };
 
   return (
-    <div className="bg-white border border-gray-100 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow">
+    <div className={`bg-white border border-gray-100 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow ${
+      note.type === 'transcript' ? 'border-l-4 border-l-indigo-400' : ''
+    }`}>
       <div className="flex items-start">
         <div className="mr-4 mt-1 flex-shrink-0">
           {getNoteIcon()}
@@ -66,6 +68,11 @@ export default function NoteItem({ note, onEdit }: NoteItemProps) {
               <div className="text-xs text-gray-400 flex items-center">
                 <Clock className="h-3 w-3 mr-1" />
                 {note.created_at ? formatDate(note.created_at) : 'Just now'}
+                {note.type === 'transcript' && (
+                  <span className="ml-2 px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-xs">
+                    Transcript
+                  </span>
+                )}
               </div>
             </div>
             

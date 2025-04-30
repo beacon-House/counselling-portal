@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { Note } from '../../../types/types';
-import { Loader, X, Search, Calendar, Plus } from 'lucide-react';
+import { Loader, X, Search, Calendar, Plus, MessageSquare, FileText } from 'lucide-react';
 import NoteItem from './NoteItem';
 import NoteDetails from './NoteDetails';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -38,6 +38,7 @@ export default function NotesPanel({
   const [searchTerm, setSearchTerm] = useState('');
   const [localIsDetailView, setLocalIsDetailView] = useState(isDetailView);
   const [localSelectedNote, setLocalSelectedNote] = useState<Note | null>(selectedNote);
+  const [activeTab, setActiveTab] = useState<'all' | 'text' | 'transcript'>('all');
   
   useEffect(() => {
     fetchNotes();
@@ -59,7 +60,6 @@ export default function NotesPanel({
           editor:updated_by(name)
         `)
         .eq('student_id', studentId)
-        .eq('type', 'text')
         .order('created_at', { ascending: false });
       
       if (phaseId) {
@@ -108,6 +108,9 @@ export default function NotesPanel({
     setLocalSelectedNote(null);
     setIsDetailView(false);
     setSelectedNote(null);
+    
+    // Refresh notes to get up-to-date task processing info
+    fetchNotes();
   };
   
   const handleSaveNote = (note: Note) => {
@@ -121,23 +124,31 @@ export default function NotesPanel({
       setNotes(notes.map(n => n.id === note.id ? note : n));
     }
     
-    setLocalIsDetailView(false);
-    setLocalSelectedNote(null);
-    setIsDetailView(false);
-    setSelectedNote(null);
+    // Don't automatically close the detail view for transcripts
+    // Let the user decide to process or close
+    if (note.type !== 'transcript') {
+      setLocalIsDetailView(false);
+      setLocalSelectedNote(null);
+      setIsDetailView(false);
+      setSelectedNote(null);
+    }
   };
   
   const handleDeleteNote = (noteId: string) => {
     setNotes(notes.filter(n => n.id !== noteId));
   };
   
-  // Filter notes by search term
+  // Filter notes by search term and type
   const filteredNotes = notes.filter(note => {
-    const searchContent = 
-      (note.title || '') + 
-      (note.content || '');
+    const matchesSearch = 
+      (note.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (note.content || '').toLowerCase().includes(searchTerm.toLowerCase());
     
-    return searchContent.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = 
+      activeTab === 'all' || 
+      note.type === activeTab;
+    
+    return matchesSearch && matchesType;
   });
 
   // Helper to get contextual details
@@ -224,7 +235,7 @@ export default function NotesPanel({
       )}
       
       {/* Search and Create */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mb-6">
         <div className="relative flex-1">
           <input
             type="text"
@@ -247,6 +258,42 @@ export default function NotesPanel({
             New Note
           </motion.button>
         </div>
+      </div>
+      
+      {/* Note Type Filters */}
+      <div className="flex border-b border-gray-200 mb-6">
+        <button
+          className={`flex items-center py-3 px-5 border-b-2 ${
+            activeTab === 'all' 
+              ? 'text-gray-800 border-gray-800 font-medium' 
+              : 'text-gray-500 border-transparent hover:text-gray-700'
+          } transition-colors text-sm`}
+          onClick={() => setActiveTab('all')}
+        >
+          All Notes
+        </button>
+        <button
+          className={`flex items-center py-3 px-5 border-b-2 ${
+            activeTab === 'text' 
+              ? 'text-gray-800 border-gray-800 font-medium' 
+              : 'text-gray-500 border-transparent hover:text-gray-700'
+          } transition-colors text-sm`}
+          onClick={() => setActiveTab('text')}
+        >
+          <FileText className="h-4 w-4 mr-2" />
+          Standard Notes
+        </button>
+        <button
+          className={`flex items-center py-3 px-5 border-b-2 ${
+            activeTab === 'transcript' 
+              ? 'text-gray-800 border-gray-800 font-medium' 
+              : 'text-gray-500 border-transparent hover:text-gray-700'
+          } transition-colors text-sm`}
+          onClick={() => setActiveTab('transcript')}
+        >
+          <MessageSquare className="h-4 w-4 mr-2" />
+          Transcripts
+        </button>
       </div>
       
       {/* Notes List */}

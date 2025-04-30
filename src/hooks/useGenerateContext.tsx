@@ -1,6 +1,6 @@
 /**
  * Custom hook for generating student context
- * Provides functionality for using Gemini API to create and update student context
+ * Provides functionality for using Supabase Edge Functions to create and update student context
  */
 import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
@@ -81,6 +81,12 @@ Student Profile:
           if (subtask.remark) {
             promptData += ` (Remark: ${subtask.remark})`;
           }
+          if (subtask.eta) {
+            promptData += ` (ETA: ${subtask.eta})`;
+          }
+          if (subtask.owner) {
+            promptData += ` (Owner: ${subtask.owner})`;
+          }
         });
       }
       
@@ -92,58 +98,32 @@ Student Profile:
         });
       }
       
-      promptData += `
-      
-Format the summary as a paragraph of approximately 100-150 words. Focus on:
-1. Overall progress in the roadmap
-2. Key strengths based on completed tasks or counselor notes
-3. Areas that need attention (blocked or delayed tasks)
-4. Any specific action items or recommendations
-      
-Return ONLY the summary text with no additional comments or headers.`;
-      
       // Token management - ensure we don't exceed limits
       if (promptData.length > 8000) {
         promptData = promptData.substring(0, 8000);
       }
-      
-      // Call the Gemini API
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      
-      if (!apiKey) {
-        throw new Error('Gemini API key is missing. Add VITE_GEMINI_API_KEY to your .env file.');
-      }
-      
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-      
-      const response = await fetch(geminiUrl, {
+
+      // Call Supabase Edge Function instead of OpenAI directly
+      // Include the OpenAI API key in the request body for the Edge Function to use
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-context`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
         },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { text: promptData }
-              ]
-            }
-          ],
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 250,
-          }
-        }),
+        body: JSON.stringify({ 
+          promptData,
+          openaiApiKey: import.meta.env.VITE_OPENAI_API_KEY // Pass the OpenAI API key to the edge function
+        })
       });
       
       if (!response.ok) {
-        throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate context');
       }
       
-      const responseData = await response.json();
-      
-      // Extract the generated context
-      const generatedContext = responseData.candidates?.[0]?.content?.parts?.[0]?.text || null;
+      const data = await response.json();
+      const generatedContext = data.generatedContext;
       
       if (!generatedContext) {
         throw new Error('Failed to generate context: No content returned from API');
