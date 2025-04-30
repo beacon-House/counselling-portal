@@ -12,6 +12,7 @@ import StudentHeader from './StudentHeader';
 import { Layers, FileText } from 'lucide-react';
 import FloatingActionButton from './FloatingActionButton';
 import { motion } from 'framer-motion';
+import { useGenerateContext } from '../../hooks/useGenerateContext';
 
 interface SelectedContext {
   phaseId: string | null;
@@ -43,6 +44,9 @@ export default function StudentView() {
     subtaskId: null,
     name: '',
   });
+  
+  // Context generation hook
+  const { generateContext } = useGenerateContext();
 
   useEffect(() => {
     if (!studentId) return;
@@ -165,6 +169,46 @@ export default function StudentView() {
     
     return `Add note to: ${selectedContext.name}`;
   };
+  
+  // Update student state when context is refreshed
+  const refreshStudentData = async () => {
+    if (!studentId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('students')
+        .select('*')
+        .eq('id', studentId)
+        .single();
+      
+      if (error) throw error;
+      
+      setStudent(data as Student);
+    } catch (error) {
+      console.error('Error refreshing student data:', error);
+    }
+  };
+  
+  // Listen for student context updates
+  useEffect(() => {
+    if (!studentId) return;
+    
+    const subscription = supabase
+      .channel('students-channel')
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'students',
+        filter: `id=eq.${studentId}`
+      }, () => {
+        refreshStudentData();
+      })
+      .subscribe();
+    
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [studentId]);
 
   return (
     <div className="h-full flex flex-col">

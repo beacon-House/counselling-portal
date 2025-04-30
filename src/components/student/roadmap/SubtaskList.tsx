@@ -7,6 +7,7 @@ import { supabase } from '../../../lib/supabase';
 import { Check, Clock, Play, AlertCircle, X, MessageSquare, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
+import { useGenerateContext } from '../../../hooks/useGenerateContext';
 
 interface SubtaskListProps {
   subtasks: Subtask[];
@@ -218,6 +219,9 @@ export default function SubtaskList({ subtasks, studentId, taskId, onSubtaskUpda
   const [hoveredSubtask, setHoveredSubtask] = useState<string | null>(null);
   const statusButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   
+  // Get the context generation function from our custom hook
+  const { generateContext } = useGenerateContext();
+  
   const openRemarkModal = (subtaskId: string, newStatus: string, currentRemark?: string) => {
     setSelectedSubtask({ id: subtaskId, status: newStatus, remark: currentRemark });
     setIsRemarkModalOpen(true);
@@ -238,6 +242,14 @@ export default function SubtaskList({ subtasks, studentId, taskId, onSubtaskUpda
         .eq('student_id', studentId);
       
       if (error) throw error;
+      
+      // If the status is now 'done', trigger student context update
+      if (selectedSubtask.status === 'done') {
+        console.log('Subtask marked as done, updating student context');
+        
+        // Update the context for this student
+        await generateContext(studentId);
+      }
       
       onSubtaskUpdate();
       setIsRemarkModalOpen(false);

@@ -3,13 +3,13 @@
  * Contains student folders and creation functionality
  * Allows counsellors to view all students in the system, not just their own
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Users, Plus, Search } from 'lucide-react';
+import { Users, Plus, Search, Info } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import type { Student } from '../../types/types';
 import { useAuth } from '../../context/AuthContext';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Extended student interface to include counsellor information
 interface ExtendedStudent extends Student {
@@ -21,8 +21,11 @@ export default function Sidebar() {
   const [students, setStudents] = useState<ExtendedStudent[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [hoveredStudent, setHoveredStudent] = useState<string | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
   const { counsellor } = useAuth();
   const navigate = useNavigate();
+  const studentRefs = useRef<Record<string, HTMLLIElement | null>>({});
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -76,6 +79,29 @@ export default function Sidebar() {
     (student.counsellor_name && student.counsellor_name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  const handleMouseEnter = (studentId: string) => {
+    setHoveredStudent(studentId);
+    
+    // Calculate tooltip position
+    const studentElement = studentRefs.current[studentId];
+    if (studentElement) {
+      const rect = studentElement.getBoundingClientRect();
+      setTooltipPosition({
+        top: rect.top + window.scrollY,
+        left: rect.right + window.scrollX + 10, // 10px offset from right edge
+      });
+    }
+  };
+  
+  const handleMouseLeave = () => {
+    setHoveredStudent(null);
+  };
+
+  // Find the hovered student data
+  const hoveredStudentData = hoveredStudent 
+    ? students.find(student => student.id === hoveredStudent) 
+    : null;
+
   return (
     <aside className="w-full h-full bg-white border-r border-gray-100 flex flex-col">
       <div className="p-5 border-b border-gray-100">
@@ -113,8 +139,12 @@ export default function Sidebar() {
             {filteredStudents.map(student => (
               <motion.li 
                 key={student.id}
+                ref={el => studentRefs.current[student.id] = el}
                 whileHover={{ x: 4 }}
                 transition={{ duration: 0.2 }}
+                onMouseEnter={() => handleMouseEnter(student.id)}
+                onMouseLeave={handleMouseLeave}
+                className="relative"
               >
                 <NavLink
                   to={`/student/${student.id}`}
@@ -137,6 +167,12 @@ export default function Sidebar() {
                             : 'bg-gray-200 text-gray-600'
                         }`}>
                           {student.counsellor_name}
+                        </span>
+                      )}
+                      
+                      {student.student_context && (
+                        <span className="ml-1 text-gray-400">
+                          <Info className="h-3 w-3" />
                         </span>
                       )}
                     </div>
@@ -168,6 +204,30 @@ export default function Sidebar() {
           </div>
         )}
       </div>
+      
+      {/* Student context tooltip */}
+      <AnimatePresence>
+        {hoveredStudent && hoveredStudentData?.student_context && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.15 }}
+            className="fixed z-50 max-w-xs bg-white p-3 rounded-lg shadow-lg border border-gray-100"
+            style={{
+              top: `${tooltipPosition.top}px`,
+              left: `${tooltipPosition.left}px`,
+            }}
+          >
+            <div className="text-xs">
+              <h4 className="font-medium text-gray-800 mb-1">Student Context</h4>
+              <p className="text-gray-600 line-clamp-6">
+                {hoveredStudentData.student_context}
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </aside>
   );
 }

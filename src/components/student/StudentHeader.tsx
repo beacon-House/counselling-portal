@@ -5,38 +5,21 @@
 import React, { useState } from 'react';
 import { Edit, Calendar, Book, GraduationCap, RefreshCw } from 'lucide-react';
 import { Student } from '../../types/types';
-import { supabase } from '../../lib/supabase';
 import { motion } from 'framer-motion';
+import { useGenerateContext } from '../../hooks/useGenerateContext';
 
 interface StudentHeaderProps {
   student: Student;
 }
 
 export default function StudentHeader({ student }: StudentHeaderProps) {
-  const [isGeneratingContext, setIsGeneratingContext] = useState(false);
+  const { generateContext, isGenerating } = useGenerateContext();
   
-  const generateContextSummary = async () => {
-    setIsGeneratingContext(true);
+  const handleGenerateContext = async () => {
     try {
-      // This is a placeholder for the actual AI context generation
-      // In a real implementation, this would call a function to generate the context
-      
-      // For now, we'll just update the student_context field with a placeholder
-      const contextSummary = `Generated context summary for ${student.name}. This student is in ${student.grade} following the ${student.curriculum} curriculum, targeting graduation in ${student.target_year}.`;
-      
-      const { error } = await supabase
-        .from('students')
-        .update({ student_context: contextSummary })
-        .eq('id', student.id);
-        
-      if (error) throw error;
-      
-      // Update local state
-      student.student_context = contextSummary;
+      await generateContext(student.id);
     } catch (error) {
-      console.error('Error generating context summary:', error);
-    } finally {
-      setIsGeneratingContext(false);
+      console.error('Error generating context:', error);
     }
   };
 
@@ -79,19 +62,28 @@ export default function StudentHeader({ student }: StudentHeaderProps) {
         <div className="flex justify-between items-start">
           <h3 className="text-sm font-medium text-gray-700 mb-2">Student Context</h3>
           <motion.button 
-            onClick={generateContextSummary}
-            disabled={isGeneratingContext}
+            onClick={handleGenerateContext}
+            disabled={isGenerating}
             className="flex items-center text-xs text-gray-500 hover:text-gray-700 transition-colors duration-200"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <RefreshCw className={`h-3 w-3 mr-1.5 ${isGeneratingContext ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-3 w-3 mr-1.5 ${isGenerating ? 'animate-spin' : ''}`} />
             Generate
           </motion.button>
         </div>
-        <p className="text-sm text-gray-600 leading-relaxed">
-          {student.student_context || 'No context available. Click "Generate" to create a summary.'}
-        </p>
+        
+        {isGenerating ? (
+          <div className="animate-pulse">
+            <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-600 leading-relaxed">
+            {student.student_context || 'No context available. Click "Generate" to create a summary.'}
+          </p>
+        )}
       </div>
     </motion.div>
   );
