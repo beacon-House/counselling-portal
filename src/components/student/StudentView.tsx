@@ -9,6 +9,7 @@ import { Student, Phase, Task, Note } from '../../types/types';
 import RoadmapView from './roadmap/RoadmapView';
 import NotesPanel from './notes/NotesPanel';
 import StudentHeader from './StudentHeader';
+import { Layers, FileText } from 'lucide-react';
 import FloatingActionButton from './FloatingActionButton';
 import { motion } from 'framer-motion';
 
@@ -28,12 +29,11 @@ export default function StudentView() {
   const [error, setError] = useState<string | null>(null);
   const [activePhaseId, setActivePhaseId] = useState<string | null>(null);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
-  const [activeSubtaskId, setActiveSubtaskId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'roadmap' | 'notes'>('roadmap');
   
   // Detail view state for notes
   const [isDetailView, setIsDetailView] = useState(false);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
-  const [isFileUpload, setIsFileUpload] = useState(false);
   
   // FAB state
   const [isFabOpen, setIsFabOpen] = useState(false);
@@ -141,31 +141,20 @@ export default function StudentView() {
   
   // Handle adding a note from the FAB
   const handleAddNote = () => {
+    // First switch to the notes tab
+    setActiveTab('notes');
+    
+    // Then set up the note creation state
     setActivePhaseId(selectedContext.phaseId);
     setActiveTaskId(selectedContext.taskId);
-    setActiveSubtaskId(selectedContext.subtaskId);
-    setIsDetailView(true);
-    setIsFileUpload(false);
-    setSelectedNote(null);
+    
+    // Slight delay to ensure the tab switch completes before opening detail view
+    setTimeout(() => {
+      setIsDetailView(true);
+      setSelectedNote(null);
+    }, 10);
+    
     setIsFabOpen(false);
-  };
-  
-  // Handle uploading a file from the FAB
-  const handleUploadFile = () => {
-    setActivePhaseId(selectedContext.phaseId);
-    setActiveTaskId(selectedContext.taskId);
-    setActiveSubtaskId(selectedContext.subtaskId);
-    setIsDetailView(true);
-    setIsFileUpload(true);
-    setSelectedNote(null);
-    setIsFabOpen(false);
-  };
-
-  // Handle note being saved
-  const handleNoteSaved = (note: Note) => {
-    setIsDetailView(false);
-    setSelectedNote(null);
-    setIsFileUpload(false);
   };
 
   // Get contextual text for FAB menu
@@ -191,53 +180,83 @@ export default function StudentView() {
         <>
           <StudentHeader student={student} />
           
+          {/* Tab Navigation */}
+          <div className="border-b border-gray-100 bg-white">
+            <div className="max-w-screen-2xl mx-auto px-4">
+              <div className="flex space-x-8">
+                <button
+                  onClick={() => setActiveTab('roadmap')}
+                  className={`flex items-center py-4 border-b-2 font-medium text-sm transition-colors ${
+                    activeTab === 'roadmap'
+                      ? 'border-gray-800 text-gray-800'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <Layers className="h-4 w-4 mr-2" />
+                  Roadmap
+                </button>
+                <button
+                  onClick={() => setActiveTab('notes')}
+                  className={`flex items-center py-4 border-b-2 font-medium text-sm transition-colors ${
+                    activeTab === 'notes'
+                      ? 'border-gray-800 text-gray-800'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Notes
+                </button>
+              </div>
+            </div>
+          </div>
+          
           <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
-              className="w-full md:w-1/2 overflow-auto border-b md:border-b-0 md:border-r border-gray-100"
-            >
-              <RoadmapView 
-                phases={phasesWithTasks} 
-                studentId={studentId || ''} 
-                activePhaseId={activePhaseId}
-                activeTaskId={activeTaskId}
-                setActivePhaseId={setActivePhaseId}
-                setActiveTaskId={setActiveTaskId}
-                onOpenFab={handleOpenFab}
-              />
-            </motion.div>
-            
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="w-full md:w-1/2 overflow-auto"
-            >
-              <NotesPanel 
-                studentId={studentId || ''} 
-                phaseId={activePhaseId} 
-                taskId={activeTaskId}
-                subtaskId={activeSubtaskId}
-                isDetailView={isDetailView}
-                selectedNote={selectedNote}
-                isFileUpload={isFileUpload}
-                setIsDetailView={setIsDetailView}
-                setSelectedNote={setSelectedNote}
-                onNoteSaved={handleNoteSaved}
-              />
-            </motion.div>
+            {activeTab === 'roadmap' ? (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+                className="w-full overflow-auto"
+              >
+                <RoadmapView 
+                  phases={phasesWithTasks} 
+                  studentId={studentId || ''} 
+                  activePhaseId={activePhaseId}
+                  activeTaskId={activeTaskId}
+                  setActivePhaseId={setActivePhaseId}
+                  setActiveTaskId={setActiveTaskId}
+                  onOpenFab={handleOpenFab}
+                />
+              </motion.div>
+            ) : (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+                className="w-full overflow-auto"
+              >
+                <NotesPanel 
+                  studentId={studentId || ''} 
+                  phaseId={activePhaseId} 
+                  taskId={activeTaskId}
+                  isDetailView={isDetailView}
+                  selectedNote={selectedNote}
+                  setIsDetailView={setIsDetailView}
+                  setSelectedNote={setSelectedNote}
+                />
+              </motion.div>
+            )}
           </div>
           
           {/* Floating Action Button */}
-          <FloatingActionButton 
-            isOpen={isFabOpen}
-            toggleOpen={() => setIsFabOpen(!isFabOpen)}
-            onAddNote={handleAddNote}
-            onUploadFile={handleUploadFile}
-            contextText={getContextText()}
-          />
+          {activeTab === 'roadmap' && (
+            <FloatingActionButton 
+              isOpen={isFabOpen}
+              toggleOpen={() => setIsFabOpen(!isFabOpen)}
+              onAddNote={handleAddNote}
+              contextText={getContextText()}
+            />
+          )}
         </>
       ) : (
         <div className="flex-1 flex justify-center items-center">

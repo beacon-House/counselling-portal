@@ -60,10 +60,14 @@ export interface Note {
   student_id?: string;
   phase_id?: string;
   task_id?: string;
-  subtask_id?: string;
   content?: string;
   type: NoteType;
   file_url?: string;
   created_at: string;
   title?: string;
+  updated_at?: string;
+  updated_by?: string;
+  editor?: {
+    name: string;
+  };
 }

@@ -13,10 +13,14 @@ This document tracks the current implementation status of the Beacon House Couns
 
 ### Student Management
 - Student creation form with all required fields (name, email, phone, target year, grade, curriculum)
+  - Support for custom curriculum via "Others" option
+  - Additional curriculum options (ICSE, State Board)
 - Student listing in sidebar with search functionality
 - Student profile view with basic information
 - Sidebar navigation between students
 - Student filtering by name/email
+- Cross-counsellor visibility of all students
+- Visual indicators showing student-counsellor assignments
 
 ### Roadmap Structure
 - Display of predefined phases and tasks
@@ -102,10 +106,13 @@ This document tracks the current implementation status of the Beacon House Couns
 - Using Supabase Auth with email/password
 - Custom AuthContext for state management
 - Client-side routing protection via React Router
+- Cross-counsellor access policies implemented
 
 ### Database Integration
 - Supabase setup with proper tables and relationships
-- RLS policies to be implemented
+- RLS policies implemented for:
+  - Student visibility across counsellors
+  - File storage access control
 - Database schema currently includes:
   - counsellors
   - students

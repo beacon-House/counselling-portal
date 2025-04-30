@@ -7,6 +7,7 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import Footer from './Footer';
+import AIChatPanel from './AIChatPanel';
 import { useAuth } from '../../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
@@ -95,7 +96,7 @@ export default function AppLayout() {
           <Footer />
         </main>
         
-        {/* Optional Right Panel - AI Chat */}
+        {/* AI Chat Panel */}
         <AnimatePresence>
           {showRightPanel && (
             <motion.div 
@@ -114,11 +115,7 @@ export default function AppLayout() {
                   <X size={18} className="text-gray-500" />
                 </button>
               </div>
-              <div className="p-6">
-                <p className="text-sm text-gray-500">
-                  This panel will contain the AI chat functionality in later versions. You'll be able to ask questions about students, get insights, and receive suggestions.
-                </p>
-              </div>
+              <AIChatPanel />
             </motion.div>
           )}
         </AnimatePresence>

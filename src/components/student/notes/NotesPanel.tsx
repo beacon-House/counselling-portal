@@ -1,11 +1,12 @@
 /**
  * Notes panel component
  * Displays and manages notes for a student/phase/task with full-screen editing capability
+ * Updated to properly handle subtaskId prop and prevent reference errors
  */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { Note } from '../../../types/types';
-import { PlusCircle, FileText, Loader, X, Search, Calendar, Plus } from 'lucide-react';
+import { Loader, X, Search, Calendar, Plus } from 'lucide-react';
 import NoteItem from './NoteItem';
 import NoteDetails from './NoteDetails';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -17,23 +18,19 @@ interface NotesPanelProps {
   subtaskId?: string | null;
   isDetailView?: boolean;
   selectedNote?: Note | null;
-  isFileUpload?: boolean;
   setIsDetailView?: (isDetailView: boolean) => void;
   setSelectedNote?: (note: Note | null) => void;
-  onNoteSaved?: (note: Note) => void;
 }
 
 export default function NotesPanel({ 
   studentId, 
   phaseId, 
-  taskId, 
-  subtaskId,
+  taskId,
+  subtaskId = null,
   isDetailView = false,
   selectedNote = null,
-  isFileUpload = false,
   setIsDetailView = () => {},
-  setSelectedNote = () => {},
-  onNoteSaved = () => {}
+  setSelectedNote = () => {}
 }: NotesPanelProps) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +38,6 @@ export default function NotesPanel({
   const [searchTerm, setSearchTerm] = useState('');
   const [localIsDetailView, setLocalIsDetailView] = useState(isDetailView);
   const [localSelectedNote, setLocalSelectedNote] = useState<Note | null>(selectedNote);
-  const [localIsFileUpload, setLocalIsFileUpload] = useState(isFileUpload);
   
   useEffect(() => {
     fetchNotes();
@@ -51,16 +47,19 @@ export default function NotesPanel({
   useEffect(() => {
     setLocalIsDetailView(isDetailView);
     setLocalSelectedNote(selectedNote);
-    setLocalIsFileUpload(isFileUpload);
-  }, [isDetailView, selectedNote, isFileUpload]);
+  }, [isDetailView, selectedNote]);
 
   const fetchNotes = async () => {
     setLoading(true);
     try {
       let query = supabase
         .from('notes')
-        .select('*')
+        .select(`
+          *,
+          editor:updated_by(name)
+        `)
         .eq('student_id', studentId)
+        .eq('type', 'text')
         .order('created_at', { ascending: false });
       
       if (phaseId) {
@@ -69,10 +68,6 @@ export default function NotesPanel({
       
       if (taskId) {
         query = query.eq('task_id', taskId);
-      }
-      
-      if (subtaskId) {
-        query = query.eq('subtask_id', subtaskId);
       }
       
       const { data, error } = await query;
@@ -90,7 +85,6 @@ export default function NotesPanel({
   const handleCreateNote = () => {
     setLocalSelectedNote(null);
     setLocalIsDetailView(true);
-    setLocalIsFileUpload(false);
     setIsDetailView(true);
     setSelectedNote(null);
   };
@@ -98,7 +92,13 @@ export default function NotesPanel({
   const handleViewNote = (note: Note) => {
     setLocalSelectedNote(note);
     setLocalIsDetailView(true);
-    setLocalIsFileUpload(false);
+    setIsDetailView(true);
+    setSelectedNote(note);
+  };
+  
+  const handleEditNote = (note: Note) => {
+    setLocalSelectedNote(note);
+    setLocalIsDetailView(true);
     setIsDetailView(true);
     setSelectedNote(note);
   };
@@ -106,7 +106,6 @@ export default function NotesPanel({
   const handleCloseDetail = () => {
     setLocalIsDetailView(false);
     setLocalSelectedNote(null);
-    setLocalIsFileUpload(false);
     setIsDetailView(false);
     setSelectedNote(null);
   };
@@ -124,10 +123,8 @@ export default function NotesPanel({
     
     setLocalIsDetailView(false);
     setLocalSelectedNote(null);
-    setLocalIsFileUpload(false);
     setIsDetailView(false);
     setSelectedNote(null);
-    onNoteSaved(note);
   };
   
   const handleDeleteNote = (noteId: string) => {
@@ -200,12 +197,10 @@ export default function NotesPanel({
         studentId={studentId}
         phaseId={phaseId}
         taskId={taskId}
-        subtaskId={subtaskId || null}
         onClose={handleCloseDetail}
         onSave={handleSaveNote}
         onDelete={handleDeleteNote}
         isNewNote={!localSelectedNote?.id}
-        initialFileUpload={localIsFileUpload}
       />
     );
   }
@@ -277,7 +272,10 @@ export default function NotesPanel({
                       onClick={() => handleViewNote(note)}
                       className="cursor-pointer"
                     >
-                      <NoteItem note={note} />
+                      <NoteItem 
+                        note={note} 
+                        onEdit={handleEditNote}
+                      />
                     </motion.div>
                   ))}
                 </div>
@@ -290,14 +288,13 @@ export default function NotesPanel({
             animate={{ opacity: 1 }}
             className="text-center py-12 bg-gray-50 rounded-lg border border-gray-100"
           >
-            <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
             <h3 className="text-gray-600 font-medium mb-1">No notes yet</h3>
             <p className="text-gray-500 mb-5">Create your first note to get started</p>
             <button
               onClick={handleCreateNote}
               className="mx-auto px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 flex items-center justify-center"
             >
-              <PlusCircle className="h-4 w-4 mr-2" />
+              <Plus className="h-4 w-4 mr-2" />
               Add Note
             </button>
           </motion.div>

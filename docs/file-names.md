@@ -74,15 +74,15 @@ This document provides a comprehensive overview of all files in the Beacon House
 | `src/components/layout/AppLayout.tsx` | AppLayout | Main app layout with sidebar, header, content area | React Router, Sidebar, Header, Footer, Framer Motion |
 | `src/components/layout/Header.tsx` | Header | Application header with user info and search | useAuth, Lucide, Framer Motion |
 | `src/components/layout/Footer.tsx` | Footer | Application footer with copyright info | React |
-| `src/components/layout/Sidebar.tsx` | Sidebar | Sidebar with student list and search | React Router, Supabase, Lucide, Framer Motion |
+| `src/components/layout/Sidebar.tsx` | Sidebar | Sidebar with student list, search, and counsellor indicators | React Router, Supabase, Lucide, Framer Motion |
 
 #### Student Management Components
 
 | File Path | Components | Purpose | Dependencies |
 |-----------|------------|---------|-------------|
-| `src/components/student/StudentView.tsx` | StudentView | Main student dashboard view | React Router, Supabase, RoadmapView, NotesPanel, Framer Motion |
+| `src/components/student/StudentView.tsx` | StudentView | Main student dashboard view with cross-counsellor access | React Router, Supabase, RoadmapView, NotesPanel, Framer Motion |
 | `src/components/student/StudentHeader.tsx` | StudentHeader | Header showing student information | Supabase, Lucide, Framer Motion |
-| `src/components/student/CreateStudent.tsx` | CreateStudent | Form to create new students | React Router, useAuth, Supabase, Lucide, Framer Motion |
+| `src/components/student/CreateStudent.tsx` | CreateStudent | Form to create new students with custom curriculum support | React Router, useAuth, Supabase, Lucide, Framer Motion |
 | `src/components/student/FloatingActionButton.tsx` | FloatingActionButton | Contextual floating action button for adding notes | Lucide, Framer Motion |
 
 #### Roadmap Components

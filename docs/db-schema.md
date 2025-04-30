@@ -19,12 +19,24 @@ CREATE TABLE students (
     phone TEXT,
     target_year INT NOT NULL, -- Target year of college entry (e.g., 2027)
     grade TEXT NOT NULL,      -- Current grade (e.g., 11 or 12)
-    curriculum TEXT NOT NULL, -- IB / IGCSE / CBSE / ICSE / Other
+    curriculum TEXT NOT NULL, -- IB / IGCSE / CBSE / ICSE / State Board / Others
     other_curriculum TEXT,    -- For storing custom curriculum when "Others" is selected
     student_context TEXT,     -- AI-generated summary of student profile/progress
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     counsellor_id UUID REFERENCES counsellors(id) ON DELETE SET NULL
 );
+
+-- RLS Policies
+-- Allow counsellors to view all students
+CREATE POLICY "Counsellors can view all students" ON students
+  FOR SELECT
+  USING (
+    auth.role() = 'authenticated' AND
+    EXISTS (
+      SELECT 1 FROM counsellors
+      WHERE id = auth.uid()
+    )
+  );
 
 -- Table: phases
 -- Global phases applicable to all students
