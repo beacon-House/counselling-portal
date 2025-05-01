@@ -217,8 +217,8 @@ export default function StudentView() {
           <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-gray-300"></div>
         </div>
       ) : error ? (
-        <div className="flex-1 flex justify-center items-center">
-          <div className="text-red-500 bg-red-50 p-4 rounded-lg">{error}</div>
+        <div className="flex-1 flex justify-center items-center p-4">
+          <div className="text-red-500 bg-red-50 p-4 rounded-lg max-w-md text-center">{error}</div>
         </div>
       ) : student ? (
         <>
@@ -227,10 +227,10 @@ export default function StudentView() {
           {/* Tab Navigation */}
           <div className="border-b border-gray-100 bg-white">
             <div className="max-w-screen-2xl mx-auto px-4">
-              <div className="flex space-x-8">
+              <div className="flex space-x-4 md:space-x-8 overflow-x-auto scrollbar-hide">
                 <button
                   onClick={() => setActiveTab('roadmap')}
-                  className={`flex items-center py-4 border-b-2 font-medium text-sm transition-colors ${
+                  className={`flex items-center py-3 px-3 md:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                     activeTab === 'roadmap'
                       ? 'border-gray-800 text-gray-800'
                       : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -241,7 +241,7 @@ export default function StudentView() {
                 </button>
                 <button
                   onClick={() => setActiveTab('notes')}
-                  className={`flex items-center py-4 border-b-2 font-medium text-sm transition-colors ${
+                  className={`flex items-center py-3 px-3 md:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                     activeTab === 'notes'
                       ? 'border-gray-800 text-gray-800'
                       : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -303,7 +303,7 @@ export default function StudentView() {
           )}
         </>
       ) : (
-        <div className="flex-1 flex justify-center items-center">
+        <div className="flex-1 flex justify-center items-center p-4">
           <div className="text-gray-500">Student not found</div>
         </div>
       )}

@@ -24,22 +24,22 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-sm"
+        className="max-w-md w-full space-y-8 bg-white p-6 sm:p-10 rounded-xl shadow-sm"
       >
         <div>
-          <h2 className="mt-6 text-center text-3xl font-light text-gray-900">
+          <h2 className="mt-4 sm:mt-6 text-center text-2xl sm:text-3xl font-light text-gray-900">
             Beacon House
           </h2>
           <p className="mt-2 text-center text-sm text-gray-500">
             Counsellor Portal Login
           </p>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form className="mt-6 sm:mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
               <label htmlFor="email-address" className="text-sm text-gray-600 mb-1 block">
@@ -90,11 +90,13 @@ export default function Login() {
               className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-all duration-200"
             >
               {loading ? (
-                <Loader className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
+                <Loader className="animate-spin h-5 w-5 text-white" />
               ) : (
-                <LogIn className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+                <>
+                  <LogIn className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+                  Sign in
+                </>
               )}
-              Sign in
             </motion.button>
           </div>
         </form>

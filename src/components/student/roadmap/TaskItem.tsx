@@ -65,7 +65,7 @@ export default function TaskItem({
   return (
     <div key={task.id} className="mt-2">
       <motion.div 
-        className={`flex justify-between items-center p-3 cursor-pointer rounded-lg transition-colors duration-200 ${
+        className={`flex justify-between items-center p-2.5 md:p-3 cursor-pointer rounded-lg transition-colors duration-200 ${
           isActive ? 'bg-gray-100' : 'hover:bg-gray-50'
         }`}
         onClick={onToggleTask}
@@ -73,15 +73,16 @@ export default function TaskItem({
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        <div className="flex items-center">
+        <div className="flex items-center min-w-0">
           <motion.div
             initial={false}
             animate={{ rotate: isExpanded ? 90 : 0 }}
             transition={{ duration: 0.2 }}
+            className="flex-shrink-0"
           >
             <ChevronRight className="h-4 w-4 text-gray-400 mr-2" />
           </motion.div>
-          <span className="text-gray-700">{task.sequence}. {task.name}</span>
+          <span className="text-gray-700 truncate">{task.sequence}. {task.name}</span>
         </div>
       </motion.div>
       
@@ -94,7 +95,7 @@ export default function TaskItem({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="pl-9 mt-1 ml-2">
+            <div className="pl-7 md:pl-9 mt-1 ml-2">
               {/* Subtasks List */}
               <SubtaskList 
                 subtasks={subtasks || []} 

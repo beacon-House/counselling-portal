@@ -92,9 +92,9 @@ export default function CreateStudent() {
     <motion.div 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="container mx-auto px-5 py-8 max-w-3xl"
+      className="container mx-auto px-4 sm:px-5 py-6 md:py-8 max-w-3xl"
     >
-      <div className="mb-6">
+      <div className="mb-5 md:mb-6">
         <motion.button
           whileHover={{ x: -3 }}
           onClick={() => navigate(-1)}
@@ -109,9 +109,9 @@ export default function CreateStudent() {
         initial={{ y: 20 }}
         animate={{ y: 0 }}
         transition={{ delay: 0.1 }}
-        className="bg-white rounded-xl shadow-sm border border-gray-100 p-8"
+        className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 md:p-8"
       >
-        <h1 className="text-2xl font-light mb-8 text-gray-800">Create New Student</h1>
+        <h1 className="text-xl md:text-2xl font-light mb-6 md:mb-8 text-gray-800">Create New Student</h1>
 
         {error && (
           <div className="mb-6 p-4 bg-red-50 text-red-700 border border-red-100 rounded-lg">
@@ -120,7 +120,7 @@ export default function CreateStudent() {
         )}
 
         <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Full Name *
@@ -239,13 +239,13 @@ export default function CreateStudent() {
             )}
           </div>
 
-          <div className="flex justify-end mt-8">
+          <div className="flex flex-col sm:flex-row justify-end mt-6 md:mt-8 gap-3 sm:gap-0">
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               type="button"
               onClick={() => navigate(-1)}
-              className="px-5 py-3 border border-gray-200 text-gray-700 rounded-lg mr-4 hover:bg-gray-50 transition-colors"
+              className="px-5 py-3 border border-gray-200 text-gray-700 rounded-lg sm:mr-4 hover:bg-gray-50 transition-colors"
             >
               Cancel
             </motion.button>
@@ -254,7 +254,7 @@ export default function CreateStudent() {
               whileTap={{ scale: 0.98 }}
               type="submit"
               disabled={loading}
-              className="px-5 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-700 flex items-center transition-colors"
+              className="px-5 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-700 flex items-center justify-center transition-colors"
             >
               {loading ? (
                 <span className="inline-block h-4 w-4 border-t-2 border-b-2 border-white rounded-full animate-spin mr-2"></span>

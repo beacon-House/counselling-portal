@@ -35,8 +35,29 @@ export default function FloatingActionButton({
     };
   }, [isOpen, toggleOpen]);
 
+  // Calculate FAB position based on screen size
+  const getFabPosition = () => {
+    // Use smaller value on mobile devices
+    const bottomOffset = window.innerWidth < 640 ? '1rem' : '1.5rem';
+    const rightOffset = window.innerWidth < 640 ? '1rem' : '1.5rem';
+    
+    return {
+      bottom: bottomOffset,
+      right: rightOffset
+    };
+  };
+
+  const fabPosition = getFabPosition();
+
   return (
-    <div className="fixed right-6 bottom-6 z-50" ref={fabRef}>
+    <div 
+      className="fixed z-50"
+      ref={fabRef}
+      style={{
+        bottom: fabPosition.bottom,
+        right: fabPosition.right
+      }}
+    >
       <AnimatePresence>
         {isOpen && (
           <motion.div 
@@ -44,7 +65,7 @@ export default function FloatingActionButton({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.2 }}
-            className="absolute bottom-16 right-0 mb-2 bg-white rounded-lg shadow-lg p-2 w-60"
+            className="absolute bottom-16 right-0 mb-2 bg-white rounded-lg shadow-lg p-2 w-[220px] sm:w-60"
           >
             {contextText && (
               <div className="px-3 py-2 text-xs text-gray-500 border-b border-gray-100">
@@ -68,9 +89,10 @@ export default function FloatingActionButton({
       
       <motion.button
         onClick={toggleOpen}
-        className="bg-gray-800 hover:bg-gray-700 text-white rounded-full h-14 w-14 flex items-center justify-center shadow-lg"
+        className="bg-gray-800 hover:bg-gray-700 text-white rounded-full h-12 w-12 sm:h-14 sm:w-14 flex items-center justify-center shadow-lg"
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
+        aria-label={isOpen ? "Close menu" : "Open menu"}
       >
         <AnimatePresence mode="wait">
           <motion.div
@@ -81,9 +103,9 @@ export default function FloatingActionButton({
             transition={{ duration: 0.2 }}
           >
             {isOpen ? (
-              <X className="h-6 w-6" />
+              <X className="h-5 w-5 sm:h-6 sm:w-6" />
             ) : (
-              <Edit className="h-6 w-6" />
+              <Edit className="h-5 w-5 sm:h-6 sm:w-6" />
             )}
           </motion.div>
         </AnimatePresence>

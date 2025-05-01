@@ -26,6 +26,7 @@ export default function Sidebar() {
   const { counsellor } = useAuth();
   const navigate = useNavigate();
   const studentRefs = useRef<Record<string, HTMLLIElement | null>>({});
+  const sidebarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -79,17 +80,29 @@ export default function Sidebar() {
     (student.counsellor_name && student.counsellor_name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const handleMouseEnter = (studentId: string) => {
+  const handleMouseEnter = (studentId: string, event: React.MouseEvent) => {
     setHoveredStudent(studentId);
     
     // Calculate tooltip position
     const studentElement = studentRefs.current[studentId];
-    if (studentElement) {
+    if (studentElement && sidebarRef.current) {
+      const sidebarRect = sidebarRef.current.getBoundingClientRect();
       const rect = studentElement.getBoundingClientRect();
-      setTooltipPosition({
-        top: rect.top + window.scrollY,
-        left: rect.right + window.scrollX + 10, // 10px offset from right edge
-      });
+      
+      // Position below on mobile, to the right on desktop
+      const isMobile = window.innerWidth < 768;
+      
+      if (isMobile) {
+        setTooltipPosition({
+          top: rect.bottom + window.scrollY,
+          left: rect.left + window.scrollX,
+        });
+      } else {
+        setTooltipPosition({
+          top: rect.top + window.scrollY,
+          left: rect.right + window.scrollX + 10, // 10px offset from right edge
+        });
+      }
     }
   };
   
@@ -103,15 +116,16 @@ export default function Sidebar() {
     : null;
 
   return (
-    <aside className="w-full h-full bg-white border-r border-gray-100 flex flex-col">
-      <div className="p-5 border-b border-gray-100">
-        <div className="flex justify-between items-center mb-5">
+    <aside className="w-full h-full bg-white border-r border-gray-100 flex flex-col" ref={sidebarRef}>
+      <div className="p-4 md:p-5 border-b border-gray-100">
+        <div className="flex justify-between items-center mb-4 md:mb-5">
           <h2 className="text-base font-light text-gray-700">Students</h2>
           <motion.button 
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.9 }}
             onClick={handleCreateStudent}
             className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200 transition-all duration-200"
+            aria-label="Add student"
           >
             <Plus className="h-4 w-4 text-gray-600" />
           </motion.button>
@@ -135,33 +149,33 @@ export default function Sidebar() {
             <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-gray-300"></div>
           </div>
         ) : filteredStudents.length > 0 ? (
-          <ul className="py-3 px-2">
+          <ul className="py-2 md:py-3 px-2">
             {filteredStudents.map(student => (
               <motion.li 
                 key={student.id}
                 ref={el => studentRefs.current[student.id] = el}
                 whileHover={{ x: 4 }}
                 transition={{ duration: 0.2 }}
-                onMouseEnter={() => handleMouseEnter(student.id)}
+                onMouseEnter={(e) => handleMouseEnter(student.id, e)}
                 onMouseLeave={handleMouseLeave}
                 className="relative"
               >
                 <NavLink
                   to={`/student/${student.id}`}
                   className={({ isActive }) => 
-                    `flex items-center px-3 py-2.5 my-1 rounded-lg text-sm ${isActive 
+                    `flex items-center px-3 py-2.5 my-0.5 rounded-lg text-sm ${isActive 
                       ? 'text-gray-900 bg-gray-100 font-medium' 
                       : 'text-gray-600 hover:bg-gray-50'}`
                   }
                 >
-                  <span className="mr-3 text-gray-400">
+                  <span className="mr-3 text-gray-400 flex-shrink-0">
                     <Users className="h-4 w-4" />
                   </span>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center">
+                    <div className="flex flex-wrap items-center">
                       <p className="font-medium leading-tight truncate">{student.name}</p>
                       {student.counsellor_name && (
-                        <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${
+                        <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded-full truncate max-w-[80px] ${
                           student.is_own_student 
                             ? 'bg-gray-800 text-white' 
                             : 'bg-gray-200 text-gray-600'
@@ -176,15 +190,15 @@ export default function Sidebar() {
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-gray-400 mt-0.5">{student.grade} • {student.curriculum}</p>
+                    <p className="text-xs text-gray-400 mt-0.5 truncate">{student.grade} • {student.curriculum}</p>
                   </div>
                 </NavLink>
               </motion.li>
             ))}
           </ul>
         ) : (
-          <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-            <Users className="h-10 w-10 text-gray-300 mb-3" />
+          <div className="flex flex-col items-center justify-center py-10 md:py-12 px-4 text-center">
+            <Users className="h-8 w-8 md:h-10 md:w-10 text-gray-300 mb-3" />
             {searchTerm ? (
               <p className="text-gray-500 text-sm">No students match your search</p>
             ) : (
@@ -195,7 +209,7 @@ export default function Sidebar() {
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
                   onClick={handleCreateStudent}
-                  className="mt-5 px-4 py-2 bg-gray-800 text-white rounded-lg text-sm hover:bg-gray-700 transition-all duration-200 flex items-center"
+                  className="mt-4 md:mt-5 px-4 py-2 bg-gray-800 text-white rounded-lg text-sm hover:bg-gray-700 transition-all duration-200 flex items-center"
                 >
                   <Plus className="h-4 w-4 mr-1" /> Create Student
                 </motion.button>
@@ -217,6 +231,7 @@ export default function Sidebar() {
             style={{
               top: `${tooltipPosition.top}px`,
               left: `${tooltipPosition.left}px`,
+              maxWidth: window.innerWidth < 768 ? '90vw' : '300px'
             }}
           >
             <div className="text-xs">

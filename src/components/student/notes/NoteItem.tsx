@@ -47,16 +47,16 @@ export default function NoteItem({ note, onEdit }: NoteItemProps) {
   };
 
   return (
-    <div className={`bg-white border border-gray-100 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow ${
+    <div className={`bg-white border border-gray-100 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow w-full h-full flex flex-col ${
       note.type === 'transcript' ? 'border-l-4 border-l-indigo-400' : ''
     }`}>
-      <div className="flex items-start">
+      <div className="flex items-start flex-grow">
         <div className="mr-4 mt-1 flex-shrink-0">
           {getNoteIcon()}
         </div>
         
         <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-start justify-between mb-2">
             <div>
               {note.title ? (
                 <h3 className="font-medium text-gray-800 mb-1 line-clamp-1">{note.title}</h3>

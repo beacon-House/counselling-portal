@@ -217,9 +217,9 @@ export default function NotesPanel({
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-light text-gray-800">Notes {getContextText()}</h2>
+        <h2 className="text-lg md:text-xl font-light text-gray-800">Notes {getContextText()}</h2>
       </div>
       
       {error && (
@@ -252,7 +252,7 @@ export default function NotesPanel({
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
             onClick={handleCreateNote}
-            className="px-4 py-3 rounded-lg bg-gray-800 text-white flex items-center hover:bg-gray-700 transition-colors"
+            className="px-4 py-3 rounded-lg bg-gray-800 text-white flex items-center hover:bg-gray-700 transition-colors whitespace-nowrap"
           >
             <Plus className="h-4 w-4 mr-2" />
             New Note
@@ -261,34 +261,34 @@ export default function NotesPanel({
       </div>
       
       {/* Note Type Filters */}
-      <div className="flex border-b border-gray-200 mb-6">
+      <div className="flex overflow-x-auto border-b border-gray-200 mb-6 pb-1">
         <button
-          className={`flex items-center py-3 px-5 border-b-2 ${
+          className={`flex items-center py-3 px-4 border-b-2 ${
             activeTab === 'all' 
               ? 'text-gray-800 border-gray-800 font-medium' 
               : 'text-gray-500 border-transparent hover:text-gray-700'
-          } transition-colors text-sm`}
+          } transition-colors text-sm whitespace-nowrap`}
           onClick={() => setActiveTab('all')}
         >
           All Notes
         </button>
         <button
-          className={`flex items-center py-3 px-5 border-b-2 ${
+          className={`flex items-center py-3 px-4 border-b-2 ${
             activeTab === 'text' 
               ? 'text-gray-800 border-gray-800 font-medium' 
               : 'text-gray-500 border-transparent hover:text-gray-700'
-          } transition-colors text-sm`}
+          } transition-colors text-sm whitespace-nowrap`}
           onClick={() => setActiveTab('text')}
         >
           <FileText className="h-4 w-4 mr-2" />
           Standard Notes
         </button>
         <button
-          className={`flex items-center py-3 px-5 border-b-2 ${
+          className={`flex items-center py-3 px-4 border-b-2 ${
             activeTab === 'transcript' 
               ? 'text-gray-800 border-gray-800 font-medium' 
               : 'text-gray-500 border-transparent hover:text-gray-700'
-          } transition-colors text-sm`}
+          } transition-colors text-sm whitespace-nowrap`}
           onClick={() => setActiveTab('transcript')}
         >
           <MessageSquare className="h-4 w-4 mr-2" />
@@ -296,7 +296,7 @@ export default function NotesPanel({
         </button>
       </div>
       
-      {/* Notes List */}
+      {/* Notes Grid Layout */}
       <div>
         {loading ? (
           <div className="flex justify-center py-10">
@@ -310,14 +310,16 @@ export default function NotesPanel({
                   <Calendar className="h-4 w-4 mr-2" />
                   {dateGroup}
                 </h3>
-                <div className="space-y-4">
+                
+                {/* Responsive grid layout for notes */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {groupNotes.map((note) => (
                     <motion.div
                       key={note.id}
                       whileHover={{ y: -2 }}
                       transition={{ duration: 0.2 }}
                       onClick={() => handleViewNote(note)}
-                      className="cursor-pointer"
+                      className="cursor-pointer h-full flex"
                     >
                       <NoteItem 
                         note={note} 
@@ -333,7 +335,7 @@ export default function NotesPanel({
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-12 bg-gray-50 rounded-lg border border-gray-100"
+            className="text-center py-10 md:py-12 bg-gray-50 rounded-lg border border-gray-100"
           >
             <h3 className="text-gray-600 font-medium mb-1">No notes yet</h3>
             <p className="text-gray-500 mb-5">Create your first note to get started</p>

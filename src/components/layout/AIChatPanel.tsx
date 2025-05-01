@@ -54,6 +54,7 @@ export default function AIChatPanel() {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const openai = useRef<OpenAI | null>(null);
   
   // Initialize OpenAI client
@@ -467,16 +468,16 @@ progress, and recent notes if available.`;
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full" ref={chatContainerRef}>
       {/* Chat messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4" ref={messagesEndRef}>
         {messages.map(message => (
           <div 
             key={message.id} 
             className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div 
-              className={`max-w-[80%] rounded-lg p-3 ${
+              className={`max-w-[85%] sm:max-w-[80%] rounded-lg p-3 ${
                 message.sender === 'user' 
                   ? 'bg-gray-800 text-white' 
                   : 'bg-gray-100 text-gray-800'
@@ -513,12 +514,10 @@ progress, and recent notes if available.`;
             </div>
           </div>
         )}
-        
-        <div ref={messagesEndRef} />
       </div>
       
       {/* Input area */}
-      <div className="border-t border-gray-100 p-4">
+      <div className="border-t border-gray-100 p-3 md:p-4">
         <div className="relative">
           <textarea
             ref={inputRef}
@@ -526,21 +525,22 @@ progress, and recent notes if available.`;
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             placeholder="Type your query here... Use @ to mention a student"
-            className="w-full border border-gray-200 rounded-lg p-3 pr-12 min-h-[80px] max-h-[200px] resize-none focus:outline-none focus:ring-1 focus:ring-gray-300"
+            className="w-full border border-gray-200 rounded-lg p-3 pr-12 min-h-[60px] max-h-[120px] md:min-h-[80px] md:max-h-[200px] resize-none focus:outline-none focus:ring-1 focus:ring-gray-300"
           />
           
           <button
             onClick={handleSubmit}
             disabled={!inputValue.trim() || isLoading}
-            className="absolute right-3 bottom-3 p-2 rounded-full bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="absolute right-2 md:right-3 bottom-2 md:bottom-3 p-2 rounded-full bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            aria-label="Send message"
           >
             <Send className="h-4 w-4" />
           </button>
           
           {inputValue.includes('@') && (
-            <div className="absolute left-3 bottom-3 flex items-center text-gray-400">
-              <AtSign className="h-4 w-4 mr-1" />
-              <span className="text-xs">Mention a student</span>
+            <div className="absolute left-3 bottom-2 md:bottom-3 flex items-center text-gray-400 text-xs">
+              <AtSign className="h-3 w-3 mr-1" />
+              <span className="hidden sm:inline">Mention a student</span>
             </div>
           )}
         </div>
@@ -552,11 +552,11 @@ progress, and recent notes if available.`;
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="absolute bottom-full mb-2 w-full max-w-md bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50"
+              className="absolute bottom-full mb-2 w-full left-0 max-w-md bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50"
             >
               <div className="p-2 border-b border-gray-100 flex items-center">
                 <Search className="h-4 w-4 text-gray-400 mr-2" />
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-gray-600 truncate">
                   {mentionQuery ? `Searching for "${mentionQuery}"` : 'Mention a student'}
                 </span>
               </div>
@@ -569,18 +569,20 @@ progress, and recent notes if available.`;
                         onClick={() => handleStudentSelect(student)}
                         className="w-full text-left px-3 py-2 hover:bg-gray-50 transition-colors flex items-center"
                       >
-                        <User className="h-4 w-4 text-gray-400 mr-2" />
-                        <span className="text-sm font-medium">{student.displayText}</span>
+                        <User className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
+                        <span className="text-sm font-medium truncate">{student.displayText}</span>
                       </button>
                     </li>
                   ))}
                 </ul>
               ) : (
                 <div className="p-3 text-sm text-gray-500 flex items-center">
-                  <Smile className="h-4 w-4 mr-2 text-gray-400" />
-                  {mentionQuery 
-                    ? `No students found matching "${mentionQuery}"` 
-                    : 'Type to search for students'}
+                  <Smile className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+                  <span className="truncate">
+                    {mentionQuery 
+                      ? `No students found matching "${mentionQuery}"` 
+                      : 'Type to search for students'}
+                  </span>
                 </div>
               )}
             </motion.div>

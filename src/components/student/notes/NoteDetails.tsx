@@ -43,7 +43,7 @@ export default function NoteDetails({
   const [noteSaved, setNoteSaved] = useState(false);
   const { counsellor } = useAuth();
   
-  const contentEditableRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   // Set initial values from the note
   useEffect(() => {
@@ -54,25 +54,16 @@ export default function NoteDetails({
     }
   }, [note]);
   
-  // Focus the content editable div when opening in text mode
+  // Focus the textarea when opening in text mode
   useEffect(() => {
-    if (isNewNote && contentEditableRef.current) {
-      contentEditableRef.current.focus();
+    if (isNewNote && textareaRef.current) {
+      textareaRef.current.focus();
     }
   }, [isNewNote]);
   
-  // Update contentEditable div when content changes
-  useEffect(() => {
-    if (contentEditableRef.current) {
-      // Only update if different to avoid cursor jumps
-      if (contentEditableRef.current.textContent !== content) {
-        contentEditableRef.current.textContent = content;
-      }
-    }
-  }, [content]);
-  
-  const handleContentInput = (e: React.FormEvent<HTMLDivElement>) => {
-    setContent(e.currentTarget.textContent || '');
+  // Handle content change
+  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setContent(e.target.value);
   };
   
   const handleSave = async () => {
@@ -196,19 +187,19 @@ export default function NoteDetails({
   const DeleteConfirmationModal = () => (
     <AnimatePresence>
       {isDeleteModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.2 }}
-            className="bg-white rounded-xl shadow-lg p-6 max-w-md mx-4"
+            className="bg-white rounded-xl shadow-lg p-5 md:p-6 w-full max-w-md"
           >
             <h3 className="text-lg font-medium text-gray-900 mb-4">Delete Note</h3>
             <p className="text-gray-600 mb-6">
               Are you sure you want to delete this note? This action cannot be undone.
             </p>
-            <div className="flex justify-end space-x-4">
+            <div className="flex flex-col xs:flex-row justify-end space-y-3 xs:space-y-0 xs:space-x-4">
               <button
                 onClick={() => setIsDeleteModalOpen(false)}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
@@ -221,7 +212,7 @@ export default function NoteDetails({
                 disabled={isSaving}
               >
                 {isSaving ? (
-                  <span className="flex items-center">
+                  <span className="flex items-center justify-center">
                     <Loader className="animate-spin h-4 w-4 mr-2" />
                     Deleting...
                   </span>
@@ -270,7 +261,7 @@ export default function NoteDetails({
   return (
     <div className="fixed inset-0 bg-white z-50 flex flex-col">
       {/* Header */}
-      <div className="border-b border-gray-200 p-4 flex items-center justify-between">
+      <div className="border-b border-gray-200 p-3 md:p-4 flex items-center justify-between">
         <div className="flex items-center">
           <button
             onClick={onClose}
@@ -278,22 +269,22 @@ export default function NoteDetails({
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <div className="ml-4 flex items-center">
+          <div className="ml-2 md:ml-4 flex items-center">
             <span className="mr-3 text-gray-500">
               {noteType === 'transcript' ? <MessageSquare className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
             </span>
-            <h1 className="text-xl font-light text-gray-800">
+            <h1 className="text-lg md:text-xl font-light text-gray-800 truncate max-w-[180px] sm:max-w-xs md:max-w-md">
               {isNewNote ? 'New Note' : title || 'Untitled Note'}
             </h1>
           </div>
         </div>
         
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2 md:space-x-3">
           {/* Note Type Selector */}
           <select
             value={noteType}
             onChange={(e) => setNoteType(e.target.value)}
-            className="py-2 px-3 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-gray-300"
+            className="py-1.5 md:py-2 px-2 md:px-3 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-gray-300"
           >
             <option value="text">Standard Note</option>
             <option value="transcript">Meeting Transcript</option>
@@ -302,7 +293,7 @@ export default function NoteDetails({
           {note?.id && onDelete && (
             <button
               onClick={() => setIsDeleteModalOpen(true)}
-              className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500 hover:text-red-500"
+              className="p-1.5 md:p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500 hover:text-red-500"
               title="Delete note"
             >
               <Trash2 className="h-5 w-5" />
@@ -311,14 +302,14 @@ export default function NoteDetails({
           <button
             onClick={handleSave}
             disabled={isSaving || (!content.trim() && !title.trim())}
-            className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+            className="px-3 md:px-4 py-1.5 md:py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
           >
             {isSaving ? (
               <Loader className="animate-spin h-4 w-4 mr-2" />
             ) : (
               <Save className="h-4 w-4 mr-2" />
             )}
-            Save
+            <span className="hidden xs:inline">Save</span>
           </button>
         </div>
       </div>
@@ -372,18 +363,24 @@ export default function NoteDetails({
               placeholder="Title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full text-3xl font-medium placeholder-gray-300 border-0 border-b border-gray-100 pb-2 focus:outline-none focus:border-gray-300 transition-colors"
+              className="w-full text-xl md:text-3xl font-medium placeholder-gray-300 border-0 border-b border-gray-100 pb-2 focus:outline-none focus:border-gray-300 transition-colors"
             />
           </div>
           
-          {/* Content area */}
-          <div
-            ref={contentEditableRef}
-            contentEditable="true"
-            onInput={handleContentInput}
-            className="prose prose-lg max-w-none min-h-[calc(100vh-250px)] focus:outline-none"
+          {/* Content area - Replace contentEditable with textarea */}
+          <textarea
+            ref={textareaRef}
+            value={content}
+            onChange={handleContentChange}
+            className="w-full prose prose-lg max-w-none min-h-[calc(100vh-300px)] focus:outline-none resize-none border-0 font-inherit"
             placeholder={noteType === 'transcript' ? 'Paste meeting transcript here...' : 'Start writing...'}
-            suppressContentEditableWarning={true}
+            style={{ 
+              whiteSpace: 'pre-wrap', 
+              lineHeight: '1.5', 
+              fontFamily: 'inherit', 
+              fontSize: 'inherit',
+              backgroundColor: 'transparent'
+            }}
           />
         </div>
       </div>

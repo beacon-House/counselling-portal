@@ -41,10 +41,18 @@ export default function AppLayout() {
 
   const toggleRightPanel = () => {
     setShowRightPanel(!showRightPanel);
+    // On mobile, close the sidebar when opening right panel
+    if (window.innerWidth < 768 && showSidebar) {
+      setShowSidebar(false);
+    }
   };
 
   const toggleSidebar = () => {
     setShowSidebar(!showSidebar);
+    // On mobile, close the right panel when opening sidebar
+    if (window.innerWidth < 768 && showRightPanel) {
+      setShowRightPanel(false);
+    }
   };
 
   return (
@@ -73,11 +81,12 @@ export default function AppLayout() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -280, opacity: 0 }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
-              className="md:relative fixed z-40 h-full bg-white w-[280px] md:w-[280px]"
+              className="md:relative fixed z-40 h-full bg-white w-[280px] md:w-[280px] shadow-md md:shadow-none"
             >
               <div className="flex justify-end p-2 md:hidden">
                 <button
                   onClick={toggleSidebar}
+                  aria-label="Close sidebar"
                   className="p-2 rounded-full hover:bg-gray-100 transition-all"
                 >
                   <X size={18} className="text-gray-500" />
@@ -101,15 +110,16 @@ export default function AppLayout() {
           {showRightPanel && (
             <motion.div 
               initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 320, opacity: 1 }}
+              animate={{ width: window.innerWidth < 768 ? '100%' : 320, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
-              className="bg-white border-l border-gray-100 shadow-lg overflow-auto relative"
+              className="md:relative fixed inset-0 md:inset-auto z-40 bg-white border-l border-gray-100 shadow-lg overflow-auto"
             >
               <div className="sticky top-0 bg-white p-4 border-b border-gray-100 flex justify-between items-center">
                 <h2 className="text-lg font-light">AI Assistant</h2>
                 <button 
                   onClick={toggleRightPanel}
+                  aria-label="Close AI panel"
                   className="p-1 rounded-full hover:bg-gray-100 transition-all"
                 >
                   <X size={18} className="text-gray-500" />

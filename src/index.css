@@ -1,3 +1,66 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+html, body, #root {
+  height: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Hide scrollbar in webkit browsers while maintaining functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, Opera */
+}
+
+/* Improve tap targets for mobile */
+button, 
+a, 
+[role="button"],
+input[type="checkbox"], 
+input[type="radio"],
+select {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Exception for icon-only buttons that are already properly sized */
+button.p-1,
+button.p-1.5, 
+button.p-2,
+button.rounded-full {
+  min-height: unset;
+  min-width: unset;
+}
+
+/* For DatePicker components */
+.react-datepicker-wrapper input {
+  min-height: 38px;  /* Minimum touch target size */
+}
+
+/* Improve focus states for accessibility */
+:focus-visible {
+  outline: 2px solid rgba(0, 0, 0, 0.2);
+  outline-offset: 2px;
+}
+
+/* Better font rendering */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (max-width: 640px) {
+  /* Adjust font sizes for small screens */
+  html {
+    font-size: 14px;  /* Make base font slightly smaller */
+  }
+  
+  /* Ensure inputs are easier to tap */
+  input, select, textarea {
+    font-size: 16px !important; /* Prevent iOS zoom */
+  }
+}

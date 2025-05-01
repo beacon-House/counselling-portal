@@ -65,14 +65,14 @@ const RemarkModal = ({ isOpen, onClose, onSave, currentRemark = '' }: RemarkModa
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.2 }}
             ref={modalRef}
-            className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md mx-4"
+            className="bg-white rounded-xl shadow-lg p-5 md:p-6 w-full max-w-md"
           >
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-light text-gray-800">Add Remark</h3>
@@ -107,13 +107,13 @@ const RemarkModal = ({ isOpen, onClose, onSave, currentRemark = '' }: RemarkModa
               </div>
             </div>
             
-            <div className="flex justify-end gap-3">
+            <div className="flex flex-col xs:flex-row justify-end gap-3">
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200 order-2 xs:order-1"
               >
                 Cancel
               </motion.button>
@@ -122,7 +122,7 @@ const RemarkModal = ({ isOpen, onClose, onSave, currentRemark = '' }: RemarkModa
                 whileTap={{ scale: 0.98 }}
                 type="button"
                 onClick={handleSave}
-                className="px-4 py-2 text-sm font-medium text-white bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors duration-200"
+                className="px-4 py-2 text-sm font-medium text-white bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors duration-200 order-1 xs:order-2"
               >
                 Save
               </motion.button>
@@ -163,14 +163,40 @@ const StatusDropdown = ({
     };
   }, [onClose]);
 
+  // Adjust position based on screen size to prevent off-screen rendering
+  const calculatePosition = () => {
+    const screenWidth = window.innerWidth;
+    const menuWidth = position.width;
+    
+    let left = position.left;
+    
+    // Ensure the dropdown stays within the screen
+    if (left + menuWidth > screenWidth - 10) {
+      left = screenWidth - menuWidth - 10;
+    }
+    
+    // Make sure it's not positioned off the left edge
+    if (left < 10) {
+      left = 10;
+    }
+    
+    return {
+      top: position.top,
+      left: left,
+      width: position.width
+    };
+  };
+  
+  const adjustedPosition = calculatePosition();
+
   return createPortal(
     <div 
       ref={dropdownRef}
       className="fixed bg-white rounded-lg shadow-lg py-1 border border-gray-200"
       style={{
-        top: position.top + 'px',
-        left: position.left + 'px',
-        width: position.width + 'px',
+        top: adjustedPosition.top + 'px',
+        left: adjustedPosition.left + 'px',
+        width: adjustedPosition.width + 'px',
         zIndex: 9999,
       }}
     >
@@ -354,10 +380,17 @@ export default function SubtaskList({ subtasks, studentId, taskId, onSubtaskUpda
     if (!buttonElement) return;
     
     const rect = buttonElement.getBoundingClientRect();
+    
+    // On mobile, position underneath the button rather than to the right
+    const isMobile = window.innerWidth < 768;
+    let top = rect.bottom + window.scrollY;
+    let left = isMobile ? rect.left : (rect.left + window.scrollX);
+    let width = isMobile ? rect.width : rect.width;
+    
     setDropdownPosition({
-      top: rect.bottom + window.scrollY,
-      left: rect.left + window.scrollX,
-      width: rect.width
+      top,
+      left,
+      width
     });
     
     setOpenDropdown(subtaskId);
@@ -498,9 +531,9 @@ export default function SubtaskList({ subtasks, studentId, taskId, onSubtaskUpda
             onClick={() => handleSubtaskClick(subtask.id)}
           >
             <div className="p-3">
-              <div className="flex flex-wrap md:flex-nowrap md:items-center gap-3">
+              <div className="flex flex-col space-y-3">
                 {/* Group 1: Subtask Name */}
-                <div className="flex items-center min-w-0 flex-1">
+                <div className="flex items-start min-w-0">
                   {editingSubtaskId === subtask.id ? (
                     <input
                       type="text"
@@ -518,9 +551,9 @@ export default function SubtaskList({ subtasks, studentId, taskId, onSubtaskUpda
                       onClick={(e) => e.stopPropagation()}
                     />
                   ) : (
-                    <div className="flex items-center">
+                    <div className="flex items-start flex-1 min-w-0 w-full break-words">
                       <span 
-                        className="text-sm font-medium text-gray-700 truncate cursor-pointer hover:underline"
+                        className="text-sm font-medium text-gray-700 cursor-pointer hover:underline break-words w-full"
                         onClick={(e) => {
                           e.stopPropagation();
                           setEditingSubtaskId(subtask.id);
@@ -534,7 +567,7 @@ export default function SubtaskList({ subtasks, studentId, taskId, onSubtaskUpda
                             e.stopPropagation();
                             toggleSubtaskDetails(subtask.id);
                           }}
-                          className="ml-2 text-gray-400 hover:text-gray-600"
+                          className="ml-2 text-gray-400 hover:text-gray-600 flex-shrink-0"
                           title="View remark"
                         >
                           <MessageSquare className="h-3.5 w-3.5" />
@@ -544,42 +577,8 @@ export default function SubtaskList({ subtasks, studentId, taskId, onSubtaskUpda
                   )}
                 </div>
                 
-                {/* Group 2: ETA and Owner */}
-                <div className="flex flex-wrap items-center gap-3 flex-1">
-                  {/* ETA Field */}
-                  <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
-                    <Calendar className="h-3.5 w-3.5 text-gray-400 mr-1.5" />
-                    <DatePicker 
-                      selected={subtask.eta ? parseISO(subtask.eta) : null}
-                      onChange={(date) => handleEtaChange(subtask.id, date)}
-                      dateFormat="MMM d, yyyy"
-                      className="text-xs rounded border border-gray-200 py-1 px-2 focus:outline-none focus:ring-1 focus:ring-gray-300 w-28"
-                      placeholderText="Set date"
-                      isClearable
-                    />
-                  </div>
-                  
-                  {/* Owner Field */}
-                  <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
-                    <User className="h-3.5 w-3.5 text-gray-400 mr-1.5" />
-                    <select
-                      value={subtask.owner || ''}
-                      onChange={(e) => handleOwnerChange(subtask.id, e.target.value)}
-                      className="text-xs rounded border border-gray-200 py-1 px-2 focus:outline-none focus:ring-1 focus:ring-gray-300"
-                    >
-                      <option value="">Select owner</option>
-                      {student && (
-                        <option value={student.name}>{student.name}</option>
-                      )}
-                      {counsellor && (
-                        <option value={counsellor.name}>{counsellor.name}</option>
-                      )}
-                    </select>
-                  </div>
-                </div>
-                
-                {/* Group 3: Status */}
-                <div className="flex items-center">
+                {/* Group 2: Status */}
+                <div className="flex justify-between items-center">
                   <button
                     ref={el => statusButtonRefs.current[subtask.id] = el}
                     onClick={(e) => toggleDropdown(e, subtask.id)}
@@ -591,16 +590,51 @@ export default function SubtaskList({ subtasks, studentId, taskId, onSubtaskUpda
                     </span>
                     <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${openDropdown === subtask.id ? 'rotate-180' : ''}`} />
                   </button>
+                  
+                  {/* Delete button */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDeleteSubtask(subtask.id);
                     }}
-                    className="ml-2 p-1.5 text-gray-400 hover:text-red-500 hover:bg-gray-100 rounded-full transition-colors"
+                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-gray-100 rounded-full transition-colors"
                     title="Delete subtask"
+                    aria-label="Delete subtask"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
+                </div>
+                
+                {/* Group 3: ETA and Owner on separate row for mobile */}
+                <div className="flex flex-wrap md:flex-nowrap items-center gap-2 text-xs">
+                  <div className="flex items-center min-w-[130px]" onClick={(e) => e.stopPropagation()}>
+                    <Calendar className="h-3.5 w-3.5 text-gray-400 mr-1.5 flex-shrink-0" />
+                    <DatePicker 
+                      selected={subtask.eta ? parseISO(subtask.eta) : null}
+                      onChange={(date) => handleEtaChange(subtask.id, date)}
+                      dateFormat="MMM d, yyyy"
+                      className="text-xs rounded border border-gray-200 py-1 px-2 focus:outline-none focus:ring-1 focus:ring-gray-300 w-24 md:w-28"
+                      placeholderText="Set date"
+                      isClearable
+                    />
+                  </div>
+                  
+                  <div className="flex items-center flex-1" onClick={(e) => e.stopPropagation()}>
+                    <User className="h-3.5 w-3.5 text-gray-400 mr-1.5 flex-shrink-0" />
+                    <select
+                      value={subtask.owner || ''}
+                      onChange={(e) => handleOwnerChange(subtask.id, e.target.value)}
+                      className="text-xs rounded border border-gray-200 py-1 px-2 focus:outline-none focus:ring-1 focus:ring-gray-300 max-w-[150px] w-full"
+                    >
+                      <option value="">Select owner</option>
+                      {student && (
+                        <option value={student.name}>{student.name}</option>
+                      )}
+                      {counsellor && (
+                        <option value={counsellor.name}>{counsellor.name}</option>
+                      )}
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
@@ -616,7 +650,7 @@ export default function SubtaskList({ subtasks, studentId, taskId, onSubtaskUpda
                   className="overflow-hidden bg-gray-50 border-t border-gray-100"
                 >
                   <div className="p-3 text-xs text-gray-600">
-                    <p className="italic">{subtask.remark}</p>
+                    <p className="italic break-words">{subtask.remark}</p>
                   </div>
                 </motion.div>
               )}

@@ -116,8 +116,8 @@ export default function RoadmapView({
   };
 
   return (
-    <div className="p-6">
-      <h2 className="text-xl font-light mb-6 text-gray-800">Roadmap Progress</h2>
+    <div className="p-4 md:p-6">
+      <h2 className="text-lg md:text-xl font-light mb-6 text-gray-800">Roadmap Progress</h2>
       
       <div className="space-y-4">
         {phases.map(phase => (
@@ -129,20 +129,21 @@ export default function RoadmapView({
             transition={{ duration: 0.3 }}
           >
             <div 
-              className={`flex justify-between items-center p-4 cursor-pointer transition-colors duration-200 ${
+              className={`flex justify-between items-center p-3 md:p-4 cursor-pointer transition-colors duration-200 ${
                 activePhaseId === phase.id ? 'bg-gray-50' : 'bg-white hover:bg-gray-50'
               }`}
               onClick={() => togglePhase(phase.id)}
             >
-              <div className="flex items-center">
+              <div className="flex items-center min-w-0">
                 <motion.div
                   initial={false}
                   animate={{ rotate: expandedPhases[phase.id] ? 90 : 0 }}
                   transition={{ duration: 0.2 }}
+                  className="flex-shrink-0"
                 >
-                  <ChevronRight className="h-5 w-5 text-gray-400 mr-3" />
+                  <ChevronRight className="h-5 w-5 text-gray-400 mr-2 md:mr-3" />
                 </motion.div>
-                <span className="font-medium text-gray-700">{phase.sequence}. {phase.name}</span>
+                <span className="font-medium text-gray-700 truncate">{phase.sequence}. {phase.name}</span>
               </div>
             </div>
             
@@ -155,7 +156,7 @@ export default function RoadmapView({
                   transition={{ duration: 0.3 }}
                   className="overflow-hidden"
                 >
-                  <div className="pl-10 pr-4 pb-4 pt-1">
+                  <div className="pl-8 md:pl-10 pr-4 pb-4 pt-1">
                     {phase.tasks.map(task => (
                       <TaskItem
                         key={task.id}

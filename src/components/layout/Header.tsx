@@ -37,8 +37,8 @@ export default function Header({ counsellorName, toggleRightPanel, toggleSidebar
   };
 
   return (
-    <header className="bg-white shadow-sm z-50">
-      <div className="max-w-screen-2xl mx-auto px-4 py-4 flex justify-between items-center">
+    <header className="bg-white shadow-sm z-50 sticky top-0">
+      <div className="max-w-screen-2xl mx-auto px-4 py-3 md:py-4 flex justify-between items-center">
         <div className="flex items-center space-x-4">
           <button
             onClick={toggleSidebar}
@@ -52,7 +52,7 @@ export default function Header({ counsellorName, toggleRightPanel, toggleSidebar
             <img 
               src="/bh-logo.png" 
               alt="Beacon House Logo" 
-              className="h-10 w-auto"
+              className="h-8 md:h-10 w-auto"
             />
           </Link>
           
@@ -66,7 +66,7 @@ export default function Header({ counsellorName, toggleRightPanel, toggleSidebar
           </div>
         </div>
         
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-3 md:space-x-4">
           <motion.button 
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -85,9 +85,10 @@ export default function Header({ counsellorName, toggleRightPanel, toggleSidebar
                 whileTap={{ scale: 0.95 }}
                 className="flex items-center rounded-full bg-gray-100 text-sm focus:outline-none p-1 pr-2"
                 onClick={() => setShowDropdown(!showDropdown)}
+                aria-label="User menu"
               >
                 <User className="h-7 w-7 rounded-full p-1" />
-                <ChevronDown className="h-4 w-4 ml-1 text-gray-500" />
+                <ChevronDown className="h-4 w-4 ml-1 text-gray-500 hidden sm:block" />
               </motion.button>
               {showDropdown && (
                 <motion.div

@@ -1,7 +1,22 @@
--- Supabase SQL Schema for Beacon House Counsellor Portal (Fully Updated)
+# Beacon House Counsellor Portal - Database Schema Documentation
 
--- Table: counsellors
--- Stores manually created counsellor accounts
+This document provides a comprehensive overview of the database schema for the Beacon House Counsellor Portal application, including tables, relationships, constraints, RLS policies, edge functions, and environment variables.
+
+## Table of Contents
+1. [Database Tables](#database-tables)
+2. [Row Level Security (RLS) Policies](#row-level-security-rls-policies)
+3. [Constraints and Indexes](#constraints-and-indexes)
+4. [Edge Functions](#edge-functions)
+5. [Environment Variables & Secrets](#environment-variables--secrets)
+6. [Database Migrations](#database-migrations)
+7. [Storage Configuration](#storage-configuration)
+
+## Database Tables
+
+### 1. counsellors
+Stores manually created counsellor accounts.
+
+```sql
 CREATE TABLE counsellors (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
@@ -9,9 +24,12 @@ CREATE TABLE counsellors (
     phone TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
+```
 
--- Table: students
--- Each student is a "folder" assigned to a counsellor
+### 2. students
+Each student is a "folder" assigned to a counsellor.
+
+```sql
 CREATE TABLE students (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
@@ -25,8 +43,91 @@ CREATE TABLE students (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     counsellor_id UUID REFERENCES counsellors(id) ON DELETE SET NULL
 );
+```
 
--- RLS Policies
+### 3. phases
+Global phases applicable to all students.
+
+```sql
+CREATE TABLE phases (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    sequence INTEGER NOT NULL, -- Order in the roadmap
+    UNIQUE(name)
+);
+```
+
+### 4. tasks
+Global tasks within each phase.
+
+```sql
+CREATE TABLE tasks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    phase_id UUID REFERENCES phases(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    sequence INTEGER NOT NULL, -- Order within phase
+    UNIQUE(phase_id, name)
+);
+```
+
+### 5. student_subtasks
+Custom subtasks added by counsellors per student under global tasks.
+
+```sql
+CREATE TABLE student_subtasks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_id UUID REFERENCES students(id) ON DELETE CASCADE,
+    task_id UUID REFERENCES tasks(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    status TEXT DEFAULT 'yet_to_start' CHECK (
+        status IN ('yet_to_start', 'in_progress', 'done', 'blocked', 'not_applicable')
+    ),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    remark TEXT, -- Status change remark (max 120 chars)
+    eta TIMESTAMP WITH TIME ZONE, -- Expected completion date
+    owner TEXT -- Owner of the subtask (student or counsellor)
+);
+```
+
+### 6. notes
+Notes can be attached at any level (student, phase, task).
+
+```sql
+CREATE TABLE notes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_id UUID REFERENCES students(id) ON DELETE CASCADE,
+    phase_id UUID REFERENCES phases(id),
+    task_id UUID REFERENCES tasks(id),
+    content TEXT,
+    type TEXT CHECK (type IN ('text', 'file', 'image', 'transcript')),
+    file_url TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    title TEXT,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    updated_by UUID REFERENCES counsellors(id)
+);
+```
+
+### 7. note_embeddings
+Stores vector embeddings of notes for AI-powered semantic search.
+
+```sql
+CREATE TABLE note_embeddings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    note_id UUID REFERENCES notes(id) ON DELETE CASCADE,
+    embedding vector(1536),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+```
+
+## Row Level Security (RLS) Policies
+
+### students Table RLS
+
+```sql
+-- Enable RLS
+ALTER TABLE students ENABLE ROW LEVEL SECURITY;
+
 -- Allow counsellors to view all students
 CREATE POLICY "Counsellors can view all students" ON students
   FOR SELECT
@@ -38,394 +139,294 @@ CREATE POLICY "Counsellors can view all students" ON students
     )
   );
 
--- Table: phases
--- Global phases applicable to all students
-CREATE TABLE phases (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name TEXT NOT NULL,
-    sequence INTEGER NOT NULL, -- Order in the roadmap
-    UNIQUE(name)
-);
+-- Allow counsellors to insert students
+CREATE POLICY "Counsellors can insert students" ON students
+  FOR INSERT
+  WITH CHECK (
+    auth.role() = 'authenticated' AND
+    EXISTS (
+      SELECT 1 FROM counsellors
+      WHERE id = auth.uid()
+    )
+  );
 
--- Table: tasks
--- Global tasks within each phase
-CREATE TABLE tasks (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    phase_id UUID REFERENCES phases(id) ON DELETE CASCADE,
-    name TEXT NOT NULL,
-    sequence INTEGER NOT NULL, -- Order within phase
-    UNIQUE(phase_id, name)
-);
+-- Allow counsellors to update students
+CREATE POLICY "Counsellors can update students" ON students
+  FOR UPDATE
+  USING (
+    auth.role() = 'authenticated' AND
+    EXISTS (
+      SELECT 1 FROM counsellors
+      WHERE id = auth.uid()
+    )
+  );
 
--- Table: student_subtasks
--- Custom subtasks added by counsellors per student under global tasks
-CREATE TABLE student_subtasks (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    student_id UUID REFERENCES students(id) ON DELETE CASCADE,
-    task_id UUID REFERENCES tasks(id) ON DELETE CASCADE,
-    name TEXT NOT NULL,
-    status TEXT DEFAULT 'yet_to_start' CHECK (
-        status IN ('yet_to_start', 'in_progress', 'done', 'blocked', 'not_applicable')
-    ),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-    -- Note: Phase can be derived from task_id → phase_id join; no need to duplicate
-);
+-- Allow counsellors to delete students
+CREATE POLICY "Counsellors can delete students" ON students
+  FOR DELETE
+  USING (
+    auth.role() = 'authenticated' AND
+    EXISTS (
+      SELECT 1 FROM counsellors
+      WHERE id = auth.uid()
+    )
+  );
+```
 
--- Table: notes
--- Notes can be attached at any level (student, phase, task, subtask)
-CREATE TABLE notes (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    student_id UUID REFERENCES students(id) ON DELETE CASCADE,
-    phase_id UUID REFERENCES phases(id),
-    task_id UUID REFERENCES tasks(id),
-    subtask_id UUID REFERENCES student_subtasks(id),
-    content TEXT,
-    type TEXT CHECK (type IN ('text', 'file', 'image', 'transcript')),
-    file_url TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-);
+### notes Table RLS
 
--- Indexes for performance
+```sql
+-- Enable RLS
+ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
+
+-- Allow counsellors to select notes
+CREATE POLICY "Counsellors can view notes" ON notes
+  FOR SELECT
+  USING (
+    auth.role() = 'authenticated' AND
+    EXISTS (
+      SELECT 1 FROM counsellors
+      WHERE id = auth.uid()
+    )
+  );
+
+-- Allow counsellors to insert notes
+CREATE POLICY "Counsellors can insert notes" ON notes
+  FOR INSERT
+  WITH CHECK (
+    auth.role() = 'authenticated' AND
+    EXISTS (
+      SELECT 1 FROM counsellors
+      WHERE id = auth.uid()
+    )
+  );
+
+-- Allow counsellors to update notes
+CREATE POLICY "Counsellors can update notes" ON notes
+  FOR UPDATE
+  USING (
+    auth.role() = 'authenticated' AND
+    EXISTS (
+      SELECT 1 FROM counsellors
+      WHERE id = auth.uid()
+    )
+  );
+
+-- Allow counsellors to delete notes
+CREATE POLICY "Counsellors can delete notes" ON notes
+  FOR DELETE
+  USING (
+    auth.role() = 'authenticated' AND
+    EXISTS (
+      SELECT 1 FROM counsellors
+      WHERE id = auth.uid()
+    )
+  );
+```
+
+### Storage RLS Policies
+
+```sql
+-- Enable RLS on storage.objects
+ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+
+-- Allow counsellors to upload files
+CREATE POLICY "Counsellors can upload files to notes bucket" ON storage.objects
+  FOR INSERT
+  WITH CHECK (
+    auth.role() = 'authenticated' AND
+    bucket_id = 'notes' AND
+    EXISTS (
+      SELECT 1 FROM counsellors
+      WHERE id = auth.uid()
+    )
+  );
+
+-- Allow counsellors to view files
+CREATE POLICY "Counsellors can view files in notes bucket" ON storage.objects
+  FOR SELECT
+  USING (
+    auth.role() = 'authenticated' AND
+    bucket_id = 'notes' AND
+    EXISTS (
+      SELECT 1 FROM counsellors
+      WHERE id = auth.uid()
+    )
+  );
+
+-- Allow public access to view files
+CREATE POLICY "Public can view files in notes bucket" ON storage.objects
+  FOR SELECT
+  USING (
+    bucket_id = 'notes'
+  );
+  
+-- Allow counsellors to update files
+CREATE POLICY "Counsellors can update their own files in notes bucket" ON storage.objects
+  FOR UPDATE
+  USING (
+    auth.role() = 'authenticated' AND
+    bucket_id = 'notes' AND
+    EXISTS (
+      SELECT 1 FROM counsellors
+      WHERE id = auth.uid()
+    )
+  );
+
+-- Allow counsellors to delete files
+CREATE POLICY "Counsellors can delete files in notes bucket" ON storage.objects
+  FOR DELETE
+  USING (
+    auth.role() = 'authenticated' AND
+    bucket_id = 'notes' AND
+    EXISTS (
+      SELECT 1 FROM counsellors
+      WHERE id = auth.uid()
+    )
+  );
+```
+
+## Constraints and Indexes
+
+### Primary Keys
+- `counsellors`: `id`
+- `students`: `id`
+- `phases`: `id`
+- `tasks`: `id`
+- `student_subtasks`: `id`
+- `notes`: `id`
+- `note_embeddings`: `id`
+
+### Foreign Keys
+- `students.counsellor_id` → `counsellors(id)` ON DELETE SET NULL
+- `tasks.phase_id` → `phases(id)` ON DELETE CASCADE
+- `student_subtasks.student_id` → `students(id)` ON DELETE CASCADE
+- `student_subtasks.task_id` → `tasks(id)` ON DELETE CASCADE
+- `notes.student_id` → `students(id)` ON DELETE CASCADE
+- `notes.phase_id` → `phases(id)`
+- `notes.task_id` → `tasks(id)`
+- `notes.updated_by` → `counsellors(id)`
+- `note_embeddings.note_id` → `notes(id)` ON DELETE CASCADE
+
+### Unique Constraints
+- `counsellors.email`
+- `students.email`
+- `phases.name`
+- `tasks(phase_id, name)`
+
+### Check Constraints
+- `student_subtasks.status` must be one of: 'yet_to_start', 'in_progress', 'done', 'blocked', 'not_applicable'
+- `notes.type` must be one of: 'text', 'file', 'image', 'transcript'
+
+### Indexes
+```sql
+-- Students table indexes
+CREATE INDEX students_email_key ON students USING btree (email);
+CREATE INDEX students_pkey ON students USING btree (id);
+
+-- Student subtasks indexes
 CREATE INDEX idx_student_tasks ON student_subtasks(student_id, task_id);
+
+-- Notes indexes
 CREATE INDEX idx_student_phase_task ON notes(student_id, phase_id, task_id);
-CREATE INDEX idx_subtask_id ON notes(subtask_id);
 CREATE INDEX idx_note_created_at ON notes(created_at DESC);
 CREATE INDEX idx_note_type ON notes(type);
 
-CREATE EXTENSION IF NOT EXISTS vector;
-CREATE TABLE note_embeddings (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  note_id UUID REFERENCES notes(id) ON DELETE CASCADE,
-  embedding vector(1536),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-);
-
+-- Note embeddings indexes
 CREATE INDEX idx_note_embedding ON note_embeddings USING ivfflat (embedding vector_cosine_ops);
+```
 
--- Seeding data for phases and tasks
-INSERT INTO phases (name, sequence) VALUES ('Interest Exploration', 1);
-INSERT INTO phases (name, sequence) VALUES ('Academic Enrichment & Research', 2);
-INSERT INTO phases (name, sequence) VALUES ('Innovation Capstone Project', 3);
-INSERT INTO phases (name, sequence) VALUES ('Extracurriculars', 4);
-INSERT INTO phases (name, sequence) VALUES ('Standardized Testing', 5);
-INSERT INTO phases (name, sequence) VALUES ('Essays', 6);
-INSERT INTO phases (name, sequence) VALUES ('Letters of Recommendation', 7);
-INSERT INTO phases (name, sequence) VALUES ('College Research', 8);
-INSERT INTO phases (name, sequence) VALUES ('Application Prep', 9);
+## Edge Functions
 
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Self-Reflection & Passion Identification', 1
-        FROM phases
-        WHERE name = 'Interest Exploration';
-        
+### 1. generate-context
+**Purpose:** Generates AI-powered context summaries for students based on their notes, tasks, and progress.
 
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Skills and Strengths Mapping', 2
-        FROM phases
-        WHERE name = 'Interest Exploration';
-        
+**File:** `/supabase/functions/generate-context/index.ts`
 
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Career Exploration', 3
-        FROM phases
-        WHERE name = 'Interest Exploration';
-        
+**Environment Variables Used:**
+- OPENAI_API_KEY (passed via request)
 
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Online Courses & Workshops', 4
-        FROM phases
-        WHERE name = 'Interest Exploration';
-        
+**Input:**
+- `promptData`: Text data containing student info, notes, and tasks
+- `openaiApiKey`: OpenAI API key
 
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Extracurricular Sampling', 5
-        FROM phases
-        WHERE name = 'Interest Exploration';
-        
+**Output:**
+- `generatedContext`: AI-generated summary of student context
 
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Mentorship & Guidance', 6
-        FROM phases
-        WHERE name = 'Interest Exploration';
-        
+### 2. process-transcript
+**Purpose:** Analyzes meeting transcripts to extract actionable items, tasks, and deliverables.
 
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Strong Academic Foundation', 1
-        FROM phases
-        WHERE name = 'Academic Enrichment & Research';
-        
+**File:** `/supabase/functions/process-transcript/index.ts`
 
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Advanced Coursework/Self-Study', 2
-        FROM phases
-        WHERE name = 'Academic Enrichment & Research';
-        
+**Environment Variables Used:**
+- OPENAI_API_KEY (passed via request)
 
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Academic Competitions & Olympiads', 3
-        FROM phases
-        WHERE name = 'Academic Enrichment & Research';
-        
+**Input:**
+- `transcriptText`: The meeting transcript text
+- `phases`: List of available phases
+- `tasks`: List of available tasks
+- `studentId`: ID of the student
+- `openaiApiKey`: OpenAI API key
 
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Independent or Mentored Research', 4
-        FROM phases
-        WHERE name = 'Academic Enrichment & Research';
-        
+**Output:**
+- `extractedTasks`: Array of potential subtasks extracted from transcript
+- `phaseOptions`: Available phases
+- `taskOptions`: Available tasks
 
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Academic Summer Programs', 5
-        FROM phases
-        WHERE name = 'Academic Enrichment & Research';
-        
+### 3. ai-chat
+**Purpose:** Processes chat messages and generates AI responses for the counsellor.
 
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Reading & Intellectual Curiosity', 6
-        FROM phases
-        WHERE name = 'Academic Enrichment & Research';
-        
+**File:** `/supabase/functions/ai-chat/index.ts`
 
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Project Ideation', 1
-        FROM phases
-        WHERE name = 'Innovation Capstone Project';
-        
+**Environment Variables Used:**
+- OPENAI_API_KEY
 
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Planning & Resource Gathering', 2
-        FROM phases
-        WHERE name = 'Innovation Capstone Project';
-        
+**Input:**
+- `messages`: Array of chat messages
 
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Execution & Development', 3
-        FROM phases
-        WHERE name = 'Innovation Capstone Project';
-        
+**Output:**
+- `aiResponse`: AI-generated response
 
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Documentation & Reflection', 4
-        FROM phases
-        WHERE name = 'Innovation Capstone Project';
-        
+## Environment Variables & Secrets
 
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Showcase & Impact', 5
-        FROM phases
-        WHERE name = 'Innovation Capstone Project';
-        
+The project uses the following environment variables and secrets:
 
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Continuation & Next Steps', 6
-        FROM phases
-        WHERE name = 'Innovation Capstone Project';
-        
+```
+# Supabase Configuration
+VITE_SUPABASE_URL=https://dvhgvkkcbxhbjogjeuxs.supabase.co
+VITE_SUPABASE_ANON_KEY=[anon-key]
 
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Selection of Core Activities', 1
-        FROM phases
-        WHERE name = 'Extracurriculars';
-        
+# OpenAI Configuration
+VITE_OPENAI_API_KEY=[openai-api-key]
+```
 
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Leadership & Initiative', 2
-        FROM phases
-        WHERE name = 'Extracurriculars';
-        
+These are stored in the `.env` file at the project root.
 
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Depth of Involvement', 3
-        FROM phases
-        WHERE name = 'Extracurriculars';
-        
+## Database Migrations
 
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Community Service & Volunteering', 4
-        FROM phases
-        WHERE name = 'Extracurriculars';
-        
+The database migrations are stored in the `/supabase/migrations` directory. Each migration is a SQL file that represents a batch of changes to the database schema. Migrations are named with a timestamp prefix and a descriptive name.
 
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Achievements & Recognition', 5
-        FROM phases
-        WHERE name = 'Extracurriculars';
-        
+Key migrations include:
+- `20250424070044_calm_shore.sql`: Add remark column to student_subtasks table
+- `20250424093336_amber_water.sql`: Add title column to notes table
+- `20250424110519_quick_reef.sql`: Secure notes storage bucket with RLS policies
+- `20250424112445_hidden_snow.sql`: Storage policies for file access and management
+- `20250424115646_shy_spire.sql`: Public access policy for notes storage bucket
+- `20250424130641_quiet_harbor.sql`: Cross-counsellor access for student data
+- `20250424132306_humble_frost.sql`: Add other_curriculum column to students table
+- `20250425102930_green_wind.sql`: Remove subtask notes and update notes table structure
+- `20250430050352_still_morning.sql`: Add note editing history columns
+- `20250430050356_rustic_torch.sql`: Update note edit permissions
+- `20250430051057_snowy_fog.sql`: Fix Notes Table RLS Policies
+- `20250430054133_quiet_recipe.sql`: Update schema to allow student context generation
+- `20250430130503_frosty_trail.sql`: Add ETA and Owner fields to student_subtasks table
+- `20250430132051_blue_scene.sql`: Increase subtask remark length limit
 
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Networking & Exposure', 6
-        FROM phases
-        WHERE name = 'Extracurriculars';
-        
+## Storage Configuration
 
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Test Strategy Planning', 1
-        FROM phases
-        WHERE name = 'Standardized Testing';
-        
+### Buckets
+- `notes`: Used for storing file attachments including text files, images, and transcripts.
 
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Preparation & Practice', 2
-        FROM phases
-        WHERE name = 'Standardized Testing';
-        
-
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Taking the Exams', 3
-        FROM phases
-        WHERE name = 'Standardized Testing';
-        
-
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Score Evaluation & Improvement', 4
-        FROM phases
-        WHERE name = 'Standardized Testing';
-        
-
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Balanced Perspective on Testing', 5
-        FROM phases
-        WHERE name = 'Standardized Testing';
-        
-
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Personal Narrative Brainstorming', 1
-        FROM phases
-        WHERE name = 'Essays';
-        
-
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Understanding Essay Prompts', 2
-        FROM phases
-        WHERE name = 'Essays';
-        
-
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Drafting the Personal Statement', 3
-        FROM phases
-        WHERE name = 'Essays';
-        
-
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Revising & Polishing', 4
-        FROM phases
-        WHERE name = 'Essays';
-        
-
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Supplemental Essays Game Plan', 5
-        FROM phases
-        WHERE name = 'Essays';
-        
-
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Final Essay Checklist', 6
-        FROM phases
-        WHERE name = 'Essays';
-        
-
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Choosing Recommenders', 1
-        FROM phases
-        WHERE name = 'Letters of Recommendation';
-        
-
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Building Relationships Early', 2
-        FROM phases
-        WHERE name = 'Letters of Recommendation';
-        
-
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Requesting the Letters', 3
-        FROM phases
-        WHERE name = 'Letters of Recommendation';
-        
-
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Making it Easy for Recommenders', 4
-        FROM phases
-        WHERE name = 'Letters of Recommendation';
-        
-
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Follow-Up and Gratitude', 5
-        FROM phases
-        WHERE name = 'Letters of Recommendation';
-        
-
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Define Your College Criteria', 1
-        FROM phases
-        WHERE name = 'College Research';
-        
-
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Build an Initial College List', 2
-        FROM phases
-        WHERE name = 'College Research';
-        
-
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'In-Depth Research & Visits', 3
-        FROM phases
-        WHERE name = 'College Research';
-        
-
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Connect with Students and Alumni', 4
-        FROM phases
-        WHERE name = 'College Research';
-        
-
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Narrow Down and Balance Your List', 5
-        FROM phases
-        WHERE name = 'College Research';
-        
-
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Financial Fit & Scholarship Research', 6
-        FROM phases
-        WHERE name = 'College Research';
-        
-
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Organize Your Application Materials', 1
-        FROM phases
-        WHERE name = 'Application Prep';
-        
-
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Create Accounts & Fill Basics', 2
-        FROM phases
-        WHERE name = 'Application Prep';
-        
-
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Craft a Cohesive Narrative', 3
-        FROM phases
-        WHERE name = 'Application Prep';
-        
-
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Finalize College-Specific Components', 4
-        FROM phases
-        WHERE name = 'Application Prep';
-        
-
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Financial Aid Applications', 5
-        FROM phases
-        WHERE name = 'Application Prep';
-        
-
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Submit Applications in Phases', 6
-        FROM phases
-        WHERE name = 'Application Prep';
-        
-
-        INSERT INTO tasks (phase_id, name, sequence)
-        SELECT id, 'Interview Preparation (If Applicable)', 7
-        FROM phases
-        WHERE name = 'Application Prep';
+### Public Access
+- Public read access is enabled for the `notes` bucket to ensure that files can be viewed by authenticated users and others who have the file URL.
+- Write operations (insert, update, delete) are restricted to authenticated counsellors only.

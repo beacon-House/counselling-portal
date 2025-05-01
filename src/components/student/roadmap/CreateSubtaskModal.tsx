@@ -81,14 +81,14 @@ export default function CreateSubtaskModal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.2 }}
             ref={modalRef}
-            className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md mx-4"
+            className="bg-white rounded-xl shadow-lg p-5 md:p-6 w-full max-w-md"
           >
             <div className="flex justify-between items-center mb-5">
               <h3 className="text-lg font-light text-gray-800">Add New Subtask</h3>
@@ -124,7 +124,7 @@ export default function CreateSubtaskModal({
                 />
               </div>
 
-              <div className="flex justify-end gap-3">
+              <div className="flex flex-col xs:flex-row justify-end gap-3">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}

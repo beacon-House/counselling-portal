@@ -435,7 +435,7 @@ export default function TranscriptTaskReview({
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Owner
@@ -540,11 +540,11 @@ export default function TranscriptTaskReview({
     
     return (
       <div className={`bg-white border border-gray-200 rounded-lg p-4 ${task.isDeleted ? 'opacity-50' : ''}`}>
-        <div className="flex justify-between items-start mb-3">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-3">
           <h3 className="text-base font-semibold text-gray-900 flex-1 line-clamp-2">
             {task.description}
           </h3>
-          <div className="flex space-x-2 ml-2">
+          <div className="flex space-x-2">
             {task.isDeleted ? (
               <button
                 onClick={() => handleRestoreTask(task.id!)}
@@ -574,24 +574,24 @@ export default function TranscriptTaskReview({
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-4 text-sm">
-          <div className="flex items-start">
-            <span className="text-gray-500 mr-1">Phase/Task:</span>
-            <span className="text-gray-800 font-medium">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-4 text-sm">
+          <div className="flex items-start flex-wrap">
+            <span className="text-gray-500 mr-1 whitespace-nowrap">Phase/Task:</span>
+            <span className="text-gray-800 font-medium break-words">
               {getPhaseTaskDisplay()}
             </span>
           </div>
           
           <div className="flex items-center">
             <span className="text-gray-500 mr-1">Owner:</span>
-            <span className="text-gray-800 font-medium">
+            <span className="text-gray-800 font-medium truncate max-w-[150px]">
               {task.owner || 'Unassigned'}
             </span>
           </div>
           
           {task.dueDate && (
             <div className="flex items-center">
-              <Calendar className="h-3.5 w-3.5 text-gray-400 mr-1.5" />
+              <Calendar className="h-3.5 w-3.5 text-gray-400 mr-1.5 flex-shrink-0" />
               <span className="text-gray-800">
                 {new Date(task.dueDate).toLocaleDateString()}
               </span>
@@ -618,22 +618,22 @@ export default function TranscriptTaskReview({
 
   if (createSuccess) {
     return (
-      <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50">
+      <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 p-4">
         <motion.div 
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="bg-white rounded-lg shadow-xl p-6 max-w-lg w-full mx-4 text-center"
+          className="bg-white rounded-lg shadow-xl p-5 md:p-6 max-w-lg w-full mx-auto text-center"
         >
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="h-10 w-10 text-green-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Subtasks Created Successfully!</h2>
+          <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-2">Subtasks Created Successfully!</h2>
           <p className="text-gray-600 mb-6">
             {extractedTasks.filter(t => !t.isDeleted).length} subtasks have been added to the student's roadmap.
           </p>
           <button
             onClick={onTasksCreated}
-            className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+            className="inline-flex items-center justify-center px-4 py-2 md:px-5 md:py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
           >
             <Check className="h-5 w-5 mr-2" />
             Done
@@ -644,28 +644,29 @@ export default function TranscriptTaskReview({
   }
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
-        <div className="p-6 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-gray-800">
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 p-3 md:p-0">
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-auto max-h-[90vh] flex flex-col">
+        <div className="p-4 md:p-6 border-b border-gray-200 flex justify-between items-center">
+          <h2 className="text-lg md:text-xl font-semibold text-gray-800">
             Review Extracted Subtasks
           </h2>
           <button 
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
+            aria-label="Close"
           >
-            <X className="h-6 w-6" />
+            <X className="h-5 w-5 md:h-6 md:w-6" />
           </button>
         </div>
         
-        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+        <div className="px-4 md:px-6 py-3 md:py-4 border-b border-gray-200 bg-gray-50">
           <p className="text-sm text-gray-600">
             Review the subtasks extracted from your transcript. You can edit, delete, or add new subtasks before creating them in the student's roadmap.
           </p>
         </div>
         
         {processingError && (
-          <div className="px-6 py-4 bg-red-50 border-b border-red-100">
+          <div className="px-4 md:px-6 py-3 md:py-4 bg-red-50 border-b border-red-100">
             <div className="flex items-start">
               <AlertTriangle className="h-5 w-5 text-red-600 mr-2 flex-shrink-0 mt-0.5" />
               <div>
@@ -676,16 +677,16 @@ export default function TranscriptTaskReview({
           </div>
         )}
         
-        <div className="flex-1 overflow-auto p-6">
+        <div className="flex-1 overflow-auto p-4 md:p-6">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <Loader className="h-12 w-12 text-indigo-500 animate-spin" />
+            <div className="flex flex-col items-center justify-center py-10 md:py-12">
+              <Loader className="h-10 w-10 md:h-12 md:w-12 text-indigo-500 animate-spin" />
               <p className="mt-4 text-gray-600">Processing transcript...</p>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-5 md:space-y-6">
               {extractedTasks.length === 0 ? (
-                <div className="text-center py-12">
+                <div className="text-center py-10 md:py-12">
                   <p className="text-gray-500">No subtasks were extracted from this transcript.</p>
                   <button
                     onClick={handleAddTask}
@@ -740,16 +741,16 @@ export default function TranscriptTaskReview({
           )}
         </div>
         
-        <div className="px-6 py-4 border-t border-gray-200 flex justify-between items-center bg-gray-50">
+        <div className="px-4 md:px-6 py-3 md:py-4 border-t border-gray-200 flex flex-col xs:flex-row justify-between items-center gap-3 xs:gap-0 bg-gray-50">
           <div>
             <span className="text-sm text-gray-500">
               {extractedTasks.filter(t => !t.isDeleted).length} subtasks will be created
             </span>
           </div>
-          <div className="flex space-x-3">
+          <div className="flex flex-col xs:flex-row space-y-3 xs:space-y-0 xs:space-x-3 w-full xs:w-auto">
             <button
               onClick={onClose}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
               <X className="h-4 w-4 mr-2" />
               Cancel
@@ -757,7 +758,7 @@ export default function TranscriptTaskReview({
             <button
               onClick={handleCreateSubtasks}
               disabled={loading || creatingSubtasks || extractedTasks.filter(t => !t.isDeleted).length === 0}
-              className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
+              className={`inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
                 loading || creatingSubtasks || extractedTasks.filter(t => !t.isDeleted).length === 0 
                   ? 'bg-indigo-400 cursor-not-allowed' 
                   : 'bg-indigo-600 hover:bg-indigo-700'
