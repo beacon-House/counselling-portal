@@ -256,6 +256,11 @@ export default function FilesPanel({ studentId, phaseId, taskId, student }: File
     }
   };
 
+  // Handle external file view
+  const handleViewFile = (fileUrl: string) => {
+    window.open(fileUrl, '_blank', 'noopener,noreferrer');
+  };
+
   // Delete Confirmation Modal
   const DeleteConfirmationModal = () => (
     <AnimatePresence>
@@ -504,15 +509,13 @@ export default function FilesPanel({ studentId, phaseId, taskId, student }: File
                           Download
                         </a>
                         
-                        <a
-                          href={file.file_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <button
+                          onClick={() => handleViewFile(file.file_url)}
                           className="text-gray-600 hover:text-gray-800 text-sm font-medium flex items-center"
                         >
                           <ExternalLink className="h-4 w-4 mr-1" />
                           View
-                        </a>
+                        </button>
                         
                         <button
                           onClick={() => handleDeleteClick(file)}
