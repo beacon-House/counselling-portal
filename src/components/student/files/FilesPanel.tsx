@@ -497,10 +497,8 @@ export default function FilesPanel({ studentId, phaseId, taskId, student }: File
                       <div className="bg-gray-50 border-t border-gray-100 p-3 flex justify-between">
                         <a
                           href={file.file_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center"
                           download={file.file_name}
+                          className="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center"
                         >
                           <Download className="h-4 w-4 mr-1" />
                           Download
