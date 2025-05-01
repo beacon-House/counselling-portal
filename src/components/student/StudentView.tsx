@@ -8,8 +8,9 @@ import { supabase } from '../../lib/supabase';
 import { Student, Phase, Task, Note } from '../../types/types';
 import RoadmapView from './roadmap/RoadmapView';
 import NotesPanel from './notes/NotesPanel';
+import FilesPanel from './files/FilesPanel';
 import StudentHeader from './StudentHeader';
-import { Layers, FileText } from 'lucide-react';
+import { Layers, FileText, FolderOpen } from 'lucide-react';
 import FloatingActionButton from './FloatingActionButton';
 import { motion } from 'framer-motion';
 import { useGenerateContext } from '../../hooks/useGenerateContext';
@@ -30,7 +31,7 @@ export default function StudentView() {
   const [error, setError] = useState<string | null>(null);
   const [activePhaseId, setActivePhaseId] = useState<string | null>(null);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'roadmap' | 'notes'>('roadmap');
+  const [activeTab, setActiveTab] = useState<'roadmap' | 'notes' | 'files'>('roadmap');
   
   // Detail view state for notes
   const [isDetailView, setIsDetailView] = useState(false);
@@ -210,6 +211,18 @@ export default function StudentView() {
     };
   }, [studentId]);
 
+  // Handle file upload
+  const handleUploadFile = () => {
+    // Switch to files tab
+    setActiveTab('files');
+    
+    // Set context
+    setActivePhaseId(selectedContext.phaseId);
+    setActiveTaskId(selectedContext.taskId);
+    
+    setIsFabOpen(false);
+  };
+
   return (
     <div className="h-full flex flex-col">
       {loading ? (
@@ -250,6 +263,17 @@ export default function StudentView() {
                   <FileText className="h-4 w-4 mr-2" />
                   Notes
                 </button>
+                <button
+                  onClick={() => setActiveTab('files')}
+                  className={`flex items-center py-3 px-3 md:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                    activeTab === 'files'
+                      ? 'border-gray-800 text-gray-800'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <FolderOpen className="h-4 w-4 mr-2" />
+                  Files
+                </button>
               </div>
             </div>
           </div>
@@ -272,7 +296,7 @@ export default function StudentView() {
                   onOpenFab={handleOpenFab}
                 />
               </motion.div>
-            ) : (
+            ) : activeTab === 'notes' ? (
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -289,6 +313,20 @@ export default function StudentView() {
                   setSelectedNote={setSelectedNote}
                 />
               </motion.div>
+            ) : (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+                className="w-full overflow-auto"
+              >
+                <FilesPanel 
+                  studentId={studentId || ''} 
+                  phaseId={activePhaseId} 
+                  taskId={activeTaskId}
+                  student={student}
+                />
+              </motion.div>
             )}
           </div>
           
@@ -298,6 +336,7 @@ export default function StudentView() {
               isOpen={isFabOpen}
               toggleOpen={() => setIsFabOpen(!isFabOpen)}
               onAddNote={handleAddNote}
+              onUploadFile={handleUploadFile}
               contextText={getContextText()}
             />
           )}

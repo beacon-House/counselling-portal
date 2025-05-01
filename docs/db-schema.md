@@ -120,6 +120,25 @@ CREATE TABLE note_embeddings (
 );
 ```
 
+### 8. files
+Stores file metadata for files uploaded to Supabase storage.
+
+```sql
+CREATE TABLE files (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_id UUID REFERENCES students(id) ON DELETE CASCADE,
+    phase_id UUID REFERENCES phases(id),
+    task_id UUID REFERENCES tasks(id),
+    file_name TEXT NOT NULL,
+    file_url TEXT NOT NULL,
+    file_type TEXT,
+    file_size BIGINT,
+    description TEXT,
+    counsellor_id UUID REFERENCES counsellors(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+```
+
 ## Row Level Security (RLS) Policies
 
 ### students Table RLS
@@ -224,6 +243,57 @@ CREATE POLICY "Counsellors can delete notes" ON notes
   );
 ```
 
+### files Table RLS
+
+```sql
+-- Enable RLS
+ALTER TABLE files ENABLE ROW LEVEL SECURITY;
+
+-- Allow counsellors to select files
+CREATE POLICY "Counsellors can view files" ON files
+  FOR SELECT
+  USING (
+    auth.role() = 'authenticated' AND
+    EXISTS (
+      SELECT 1 FROM counsellors
+      WHERE id = auth.uid()
+    )
+  );
+
+-- Allow counsellors to insert files
+CREATE POLICY "Counsellors can upload files" ON files
+  FOR INSERT
+  WITH CHECK (
+    auth.role() = 'authenticated' AND
+    EXISTS (
+      SELECT 1 FROM counsellors
+      WHERE id = auth.uid()
+    )
+  );
+
+-- Allow counsellors to update files
+CREATE POLICY "Counsellors can update files" ON files
+  FOR UPDATE
+  USING (
+    auth.role() = 'authenticated' AND
+    EXISTS (
+      SELECT 1 FROM counsellors
+      WHERE id = auth.uid()
+    )
+  );
+
+-- Allow counsellors to delete files
+CREATE POLICY "Counsellors can delete files" ON files
+  FOR DELETE
+  USING (
+    auth.role() = 'authenticated' AND
+    EXISTS (
+      SELECT 1 FROM counsellors
+      WHERE id = auth.uid()
+    )
+  );
+```
+
 ### Storage RLS Policies
 
 ```sql
@@ -296,6 +366,7 @@ CREATE POLICY "Counsellors can delete files in notes bucket" ON storage.objects
 - `student_subtasks`: `id`
 - `notes`: `id`
 - `note_embeddings`: `id`
+- `files`: `id`
 
 ### Foreign Keys
 - `students.counsellor_id` → `counsellors(id)` ON DELETE SET NULL
@@ -307,6 +378,10 @@ CREATE POLICY "Counsellors can delete files in notes bucket" ON storage.objects
 - `notes.task_id` → `tasks(id)`
 - `notes.updated_by` → `counsellors(id)`
 - `note_embeddings.note_id` → `notes(id)` ON DELETE CASCADE
+- `files.student_id` → `students(id)` ON DELETE CASCADE
+- `files.phase_id` → `phases(id)`
+- `files.task_id` → `tasks(id)`
+- `files.counsellor_id` → `counsellors(id)`
 
 ### Unique Constraints
 - `counsellors.email`
@@ -334,6 +409,10 @@ CREATE INDEX idx_note_type ON notes(type);
 
 -- Note embeddings indexes
 CREATE INDEX idx_note_embedding ON note_embeddings USING ivfflat (embedding vector_cosine_ops);
+
+-- Files indexes
+CREATE INDEX idx_files_student_id ON files(student_id);
+CREATE INDEX idx_files_phase_task ON files(student_id, phase_id, task_id);
 ```
 
 ## Edge Functions
@@ -421,11 +500,12 @@ Key migrations include:
 - `20250430054133_quiet_recipe.sql`: Update schema to allow student context generation
 - `20250430130503_frosty_trail.sql`: Add ETA and Owner fields to student_subtasks table
 - `20250430132051_blue_scene.sql`: Increase subtask remark length limit
+- `20250602123456_files_management.sql`: Create files table and RLS policies for file management
 
 ## Storage Configuration
 
 ### Buckets
-- `notes`: Used for storing file attachments including text files, images, and transcripts.
+- `notes`: Used for storing file attachments including text files, images, transcripts, and general document files.
 
 ### Public Access
 - Public read access is enabled for the `notes` bucket to ensure that files can be viewed by authenticated users and others who have the file URL.

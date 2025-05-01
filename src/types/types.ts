@@ -73,3 +73,26 @@ export interface Note {
     name: string;
   };
 }
+
+export interface FileItem {
+  id: string;
+  student_id: string;
+  phase_id?: string | null;
+  task_id?: string | null;
+  file_name: string;
+  file_url: string;
+  file_type?: string | null;
+  file_size?: number | null;
+  description?: string | null;
+  counsellor_id?: string | null;
+  created_at: string;
+  counsellor?: {
+    name: string;
+  };
+  phase?: {
+    name: string;
+  };
+  task?: {
+    name: string;
+  };
+}

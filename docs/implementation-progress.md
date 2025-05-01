@@ -81,12 +81,30 @@ This document tracks the current implementation status of the Beacon House Couns
   - Validation of owner assignments
   - Creation of subtasks from transcript content
 
+### File Management System
+- Dedicated files tab with comprehensive file management
+  - File upload with drag-and-drop support
+  - File organization by phase and task
+  - File metadata tracking (size, type, upload date)
+  - Search and filtering capabilities
+- File viewing and sharing
+  - Direct download links
+  - External viewing in new tab
+  - Counsellor attribution on uploaded files
+  - File type recognition with appropriate icons
+- Security and organization
+  - Proper storage bucket integration with Supabase
+  - RLS policies for file access control
+  - Database schema for file metadata
+  - Deletion capability with confirmation
+
 ### AI Integration
 - Student context generation
   - AI-powered summary of student progress
   - Generation button in student header
   - Loading indicators and error handling
   - Context display in student profile
+  - Enhanced full-screen modal for viewing complete context
 - Transcript analysis
   - AI processing of meeting transcripts
   - Extraction of actionable items
@@ -108,19 +126,21 @@ This document tracks the current implementation status of the Beacon House Couns
 - Tab-based navigation within student view
   - Roadmap tab with phase/task structure
   - Notes tab with filtering and search
+  - Files tab for document management
   - Context preservation between tabs
 - Floating action button for contextual operations
-  - Context-aware note creation
+  - Context-aware note creation and file upload
   - Visual indicators of current context
   - Smooth animations and transitions
 - Mobile responsiveness
   - Collapsible sidebar for smaller screens
   - Responsive header with menu toggle
   - Adaptive layout for all screen sizes
+  - Touch-optimized interface elements
 
 ### Security & Data Management
 - Row Level Security (RLS) implementation
-  - Table-level security for students, notes, subtasks
+  - Table-level security for students, notes, subtasks, files
   - Storage bucket security for file access
   - Cross-counsellor data access with proper controls
 - Database integrity
@@ -136,42 +156,26 @@ This document tracks the current implementation status of the Beacon House Couns
 
 ## 🔄 Latest Implemented Features
 
-### Text Note Formatting Preservation
-- **Improved Text Handling**: Replaced contentEditable div with textarea for better format preservation
-- **Styling Enhancements**: Added white-space: pre-wrap and proper styling to preserve line breaks
-- **Consistent Rendering**: Ensured text displays the same way when editing and viewing notes
-- **Font Inheritance**: Maintained consistent font styling across the note interface
+### File Management System
+- **Comprehensive file upload interface**: New FileUploadModal component with drag-and-drop capability
+- **Categorization by phase and task**: Files can be associated with specific phases and tasks in the roadmap
+- **File metadata storage**: New database table to store file information including name, URL, type, size, and description
+- **Filtering and searching**: Filter files by phase, task, or search by file name and description
+- **Download and sharing**: Direct download links and external viewing options
+- **Delete functionality**: Ability to delete files with confirmation dialog
+- **Mobile-responsive design**: Adaptive layout for all screen sizes
+- **Visual file type indicators**: Icons for different file types (PDF, documents, images, etc.)
 
-### Transcript Processing System
-- **AI-Powered Extraction**: Meeting transcripts are now processed by OpenAI to extract action items
-- **Subtask Review Interface**: New TranscriptTaskReview component for reviewing extracted subtasks
-- **Edge Function**: New process-transcript edge function for secure API interactions
-- **Owner Validation**: Ensures owners are only assigned to students or counsellors
-- **Multi-step Workflow**:
-  1. Save transcript note
-  2. Process transcript through edge function
-  3. Review extracted tasks with editing capability
-  4. Create subtasks from approved items
-  5. Update note with extraction confirmation
+### Enhanced Student Context Viewing
+- **Full-context modal**: New modal interface for viewing complete student context
+- **Regeneration capability**: Option to regenerate context from within the modal
+- **Improved mobile experience**: Responsive design for all screen sizes
 
-### Note Type Filtering
-- Tab-based interface to filter between note types:
-  - All Notes: Shows all note types
-  - Standard Notes: Shows only text notes
-  - Transcripts: Shows only transcript notes
-- Visual indicators for transcript notes (border styling)
-- Type badge display for transcript notes
-
-### Enhanced Subtask Management
-- **ETA Date Field**: Calendar picker for setting expected completion dates
-- **Owner Assignment**: Dropdown to assign tasks to either student or counsellor
-- **Subtask Editing**: Inline name editing with validation
-- **Delete Capability**: Ability to remove subtasks with confirmation
-
-### Note Editing History
-- Track and display when notes were last updated
-- Show which counsellor made the last edit
-- Database schema updates to store edit history
+### Improved Mobile Responsiveness
+- **Subtask card layout**: Reorganized subtask cards for better mobile viewing
+- **Responsive grids**: Implemented responsive grid layouts for files and notes
+- **Better touch targets**: Increased button and link sizes for touch devices
+- **Tablet and mobile optimization**: Layout adjustments for different screen sizes
 
 ## ⏳ Planned Improvements
 
@@ -212,11 +216,20 @@ This document tracks the current implementation status of the Beacon House Couns
   - student_subtasks (with remark, eta, and owner fields)
   - notes (with title, updated_at, and updated_by fields)
   - note_embeddings (prepared for AI embeddings)
+  - files (for file metadata storage and organization)
 
 ### Edge Functions
 - **generate-context**: Creates AI-generated student summaries
 - **process-transcript**: Extracts subtasks from meeting transcripts
 - **ai-chat**: Handles natural language interaction with the system
+
+### File Storage and Management
+- Supabase Storage integration for secure file hosting
+- File type detection and appropriate icon display
+- Preview generation for supported file types
+- Metadata tracking including file size, upload date, and description
+- Search and filtering capabilities
+- Direct download links and external viewing
 
 ### Frontend Architecture
 - React with TypeScript
@@ -239,16 +252,33 @@ This document tracks the current implementation status of the Beacon House Couns
 - Role-based access control
 - Data validation on both client and server
 - Cross-counsellor permissions with proper controls
+- Secure file upload and storage
 
 ## Business Logic Implementation
 
+### File Upload Process
+1. User selects or drags a file into the upload area
+2. File metadata is extracted (size, type, name)
+3. File is validated for size and type
+4. File is uploaded to Supabase storage
+5. Metadata record is created in the files table
+6. UI is updated to reflect the new file
+7. Success message is displayed to the user
+
+### File Organization
+1. Files are associated with a student
+2. Optionally, files can be associated with a specific phase
+3. Optionally, files can be associated with a specific task
+4. Files can be searched and filtered by these associations
+5. Files are grouped by phase and task for easy browsing
+
 ### Student Context Generation
-1. Fetch student profile, notes, and subtasks
+1. Fetch student profile, notes, files, and subtasks
 2. Construct a prompt with comprehensive student data
 3. Send to OpenAI via edge function for processing
 4. Generate a concise, actionable summary
 5. Update the student record with the generated context
-6. Display the context in the student header
+6. Display the context in the student header with option to view full context
 
 ### Transcript Processing
 1. Save transcript as a note in the database
@@ -258,18 +288,3 @@ This document tracks the current implementation status of the Beacon House Couns
 5. Allow counsellor to edit, delete, or add items
 6. Create selected items as subtasks in the database
 7. Update transcript note with extraction confirmation
-
-### Subtask Status Management
-1. Display current status with visual indicators
-2. Present dropdown of available statuses
-3. On status change, prompt for optional remark
-4. Store status change with timestamp and remark
-5. Update visual indicators to reflect new status
-6. If marked as done, trigger context update
-
-### Cross-Counsellor Visibility
-1. RLS policies enable all counsellors to view all students
-2. Visual indicators show ownership (counsellor assignment)
-3. All counsellors can view and edit any student's data
-4. Edit history tracks which counsellor made changes
-5. Student listing shows all students with counsellor indicators
