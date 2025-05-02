@@ -2,9 +2,9 @@
  * Modal for creating a new subtask
  */
 import React, { useState, useEffect, useRef } from 'react';
-import { X } from 'lucide-react';
+import { X, HelpCircle } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
-import { Subtask } from '../../../types/types';
+import { Subtask, Task } from '../../../types/types';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface CreateSubtaskModalProps {
@@ -25,6 +25,7 @@ export default function CreateSubtaskModal({
   const [subtaskName, setSubtaskName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [task, setTask] = useState<Task | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -44,6 +45,28 @@ export default function CreateSubtaskModal({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen, onClose]);
+
+  // Fetch task details to get the suggestion
+  useEffect(() => {
+    if (taskId) {
+      fetchTaskDetails();
+    }
+  }, [taskId]);
+
+  const fetchTaskDetails = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('id', taskId)
+        .single();
+      
+      if (error) throw error;
+      setTask(data as Task);
+    } catch (err) {
+      console.error('Error fetching task details:', err);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,6 +124,19 @@ export default function CreateSubtaskModal({
                 <X className="h-5 w-5" />
               </motion.button>
             </div>
+
+            {/* Task suggestion */}
+            {task?.subtask_suggestion && (
+              <div className="mb-5 bg-gray-50 p-4 rounded-lg border-l-4 border-blue-400">
+                <div className="flex items-start">
+                  <HelpCircle className="h-5 w-5 mr-2 text-blue-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-1">Suggestion</h4>
+                    <p className="text-sm text-gray-600">{task.subtask_suggestion}</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {error && (
               <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg">

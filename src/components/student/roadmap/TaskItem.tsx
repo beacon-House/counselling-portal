@@ -2,8 +2,8 @@
  * Task item component
  * Displays a task with expand/collapse functionality and subtask management
  */
-import React, { useState } from 'react';
-import { ChevronRight, Plus, Loader } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { ChevronRight, Plus, Loader, HelpCircle } from 'lucide-react';
 import { Task, Subtask } from '../../../types/types';
 import SubtaskList from './SubtaskList';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -35,7 +35,10 @@ export default function TaskItem({
 }: TaskItemProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isCreatingSubtask, setIsCreatingSubtask] = useState(false);
-
+  const [showTooltip, setShowTooltip] = useState(false);
+  const tooltipTimeout = useRef<NodeJS.Timeout | null>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  
   // Function to create a new subtask inline
   const createNewSubtask = async () => {
     setIsCreatingSubtask(true);
@@ -62,6 +65,42 @@ export default function TaskItem({
     }
   };
 
+  // Show tooltip with delay to prevent accidental triggers
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+    
+    if (task.subtask_suggestion) {
+      tooltipTimeout.current = setTimeout(() => {
+        setShowTooltip(true);
+      }, 500); // 500ms delay before showing tooltip
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+    setShowTooltip(false);
+    
+    if (tooltipTimeout.current) {
+      clearTimeout(tooltipTimeout.current);
+      tooltipTimeout.current = null;
+    }
+  };
+
+  // Calculate tooltip position to avoid edge cutoff
+  const getTooltipPosition = () => {
+    if (!tooltipRef.current) return {};
+    
+    const rect = tooltipRef.current.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    
+    // Check if tooltip is going off the right edge of the screen
+    if (rect.right > viewportWidth - 20) {
+      return { right: '0', left: 'auto' };
+    }
+    
+    return {};
+  };
+
   return (
     <div key={task.id} className="mt-2">
       <motion.div 
@@ -70,8 +109,8 @@ export default function TaskItem({
         }`}
         onClick={onToggleTask}
         whileHover={{ backgroundColor: "rgb(243 244 246)" }}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
         <div className="flex items-center min-w-0">
           <motion.div
@@ -82,7 +121,47 @@ export default function TaskItem({
           >
             <ChevronRight className="h-4 w-4 text-gray-400 mr-2" />
           </motion.div>
-          <span className="text-gray-700 truncate">{task.sequence}. {task.name}</span>
+          <div className="relative">
+            <span className="text-gray-700 truncate">{task.sequence}. {task.name}</span>
+            
+            {/* Hover suggestion button (only when tooltip is not shown) */}
+            {task.subtask_suggestion && !showTooltip && (
+              <button 
+                className="ml-1.5 text-gray-400 hover:text-gray-600 transition-colors inline-flex items-center" 
+                aria-label="Task suggestion"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowTooltip(!showTooltip);
+                }}
+              >
+                <HelpCircle className="h-3.5 w-3.5" />
+              </button>
+            )}
+            
+            {/* Tooltip */}
+            {showTooltip && task.subtask_suggestion && (
+              <div 
+                ref={tooltipRef}
+                className="absolute z-10 bg-gray-800 text-white text-xs p-2 rounded-md shadow-lg max-w-xs"
+                style={{
+                  top: '100%',
+                  left: '0',
+                  marginTop: '8px',
+                  whiteSpace: 'normal',
+                  ...getTooltipPosition()
+                }}
+              >
+                {task.subtask_suggestion}
+                <div 
+                  className="absolute w-2 h-2 bg-gray-800 transform rotate-45" 
+                  style={{
+                    top: '-4px',
+                    left: '12px'
+                  }}
+                />
+              </div>
+            )}
+          </div>
         </div>
       </motion.div>
       

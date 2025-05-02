@@ -71,33 +71,39 @@ export interface Database {
           student_id: string | null
           phase_id: string | null
           task_id: string | null
-          subtask_id: string | null
           content: string | null
           type: string | null
           file_url: string | null
           created_at: string | null
+          title: string | null
+          updated_at: string | null
+          updated_by: string | null
         }
         Insert: {
           id?: string
           student_id?: string | null
           phase_id?: string | null
           task_id?: string | null
-          subtask_id?: string | null
           content?: string | null
           type?: string | null
           file_url?: string | null
           created_at?: string | null
+          title?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
         }
         Update: {
           id?: string
           student_id?: string | null
           phase_id?: string | null
           task_id?: string | null
-          subtask_id?: string | null
           content?: string | null
           type?: string | null
           file_url?: string | null
           created_at?: string | null
+          title?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -113,15 +119,15 @@ export interface Database {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "notes_subtask_id_fkey"
-            columns: ["subtask_id"]
-            referencedRelation: "student_subtasks"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "notes_task_id_fkey"
             columns: ["task_id"]
             referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notes_updated_by_fkey"
+            columns: ["updated_by"]
+            referencedRelation: "counsellors"
             referencedColumns: ["id"]
           }
         ]
@@ -153,6 +159,8 @@ export interface Database {
           status: string | null
           created_at: string | null
           remark: string | null
+          eta: string | null
+          owner: string | null
         }
         Insert: {
           id?: string
@@ -162,6 +170,8 @@ export interface Database {
           status?: string | null
           created_at?: string | null
           remark?: string | null
+          eta?: string | null
+          owner?: string | null
         }
         Update: {
           id?: string
@@ -171,6 +181,8 @@ export interface Database {
           status?: string | null
           created_at?: string | null
           remark?: string | null
+          eta?: string | null
+          owner?: string | null
         }
         Relationships: [
           {
@@ -199,6 +211,7 @@ export interface Database {
           student_context: string | null
           created_at: string | null
           counsellor_id: string | null
+          other_curriculum: string | null
         }
         Insert: {
           id?: string
@@ -211,6 +224,7 @@ export interface Database {
           student_context?: string | null
           created_at?: string | null
           counsellor_id?: string | null
+          other_curriculum?: string | null
         }
         Update: {
           id?: string
@@ -223,6 +237,7 @@ export interface Database {
           student_context?: string | null
           created_at?: string | null
           counsellor_id?: string | null
+          other_curriculum?: string | null
         }
         Relationships: [
           {
@@ -239,24 +254,94 @@ export interface Database {
           phase_id: string | null
           name: string
           sequence: number
+          subtask_suggestion: string | null
         }
         Insert: {
           id?: string
           phase_id?: string | null
           name: string
           sequence: number
+          subtask_suggestion?: string | null
         }
         Update: {
           id?: string
           phase_id?: string | null
           name?: string
           sequence?: number
+          subtask_suggestion?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "tasks_phase_id_fkey"
             columns: ["phase_id"]
             referencedRelation: "phases"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      files: {
+        Row: {
+          id: string
+          student_id: string | null
+          phase_id: string | null
+          task_id: string | null
+          file_name: string
+          file_url: string
+          file_type: string | null
+          file_size: number | null
+          description: string | null
+          counsellor_id: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          student_id?: string | null
+          phase_id?: string | null
+          task_id?: string | null
+          file_name: string
+          file_url: string
+          file_type?: string | null
+          file_size?: number | null
+          description?: string | null
+          counsellor_id?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          student_id?: string | null
+          phase_id?: string | null
+          task_id?: string | null
+          file_name?: string
+          file_url?: string
+          file_type?: string | null
+          file_size?: number | null
+          description?: string | null
+          counsellor_id?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "files_counsellor_id_fkey"
+            columns: ["counsellor_id"]
+            referencedRelation: "counsellors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "files_phase_id_fkey"
+            columns: ["phase_id"]
+            referencedRelation: "phases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "files_student_id_fkey"
+            columns: ["student_id"]
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "files_task_id_fkey"
+            columns: ["task_id"]
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           }
         ]

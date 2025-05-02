@@ -26,6 +26,7 @@ export interface Task {
   sequence: number;
   phase_id: string;
   subtasks?: Subtask[];
+  subtask_suggestion?: string; // Added field for task hover suggestions
 }
 
 export interface Subtask {
