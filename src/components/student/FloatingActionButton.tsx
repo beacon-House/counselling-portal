@@ -3,13 +3,14 @@
  * Provides a clean, centralized interface for adding notes and files
  */
 import React, { useRef, useEffect } from 'react';
-import { Edit, X, FileText, Upload } from 'lucide-react';
+import { Edit, X, FileText, Upload, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface FloatingActionButtonProps {
   isOpen: boolean;
   toggleOpen: () => void;
   onAddNote: () => void;
+  onAddTranscript: () => void;
   onUploadFile: () => void;
   contextText: string;
 }
@@ -18,6 +19,7 @@ export default function FloatingActionButton({
   isOpen,
   toggleOpen,
   onAddNote,
+  onAddTranscript,
   onUploadFile,
   contextText
 }: FloatingActionButtonProps) {
@@ -84,6 +86,17 @@ export default function FloatingActionButton({
             >
               <FileText className="h-4 w-4 mr-3 text-gray-500" />
               <span className="text-sm">Add Note</span>
+            </button>
+            
+            <button
+              onClick={() => {
+                onAddTranscript();
+                toggleOpen();
+              }}
+              className="flex items-center w-full px-3 py-2.5 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+            >
+              <MessageSquare className="h-4 w-4 mr-3 text-gray-500" />
+              <span className="text-sm">Add Transcript</span>
             </button>
             
             <button

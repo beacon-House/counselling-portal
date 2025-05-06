@@ -16,20 +16,23 @@ interface StudentHeaderProps {
 }
 
 export default function StudentHeader({ student }: StudentHeaderProps) {
-  const { generateContext, isGenerating } = useGenerateContext();
+  const { generateContext, isGenerating, error } = useGenerateContext();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isContextModalOpen, setIsContextModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [currentStudent, setCurrentStudent] = useState<Student>(student);
+  const [contextError, setContextError] = useState<string | null>(null);
   const navigate = useNavigate();
   
   const handleGenerateContext = async () => {
     try {
+      setContextError(null);
       await generateContext(currentStudent.id);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating context:', error);
+      setContextError(error.message || 'Failed to generate context. Please try again.');
     }
   };
 
@@ -85,7 +88,7 @@ export default function StudentHeader({ student }: StudentHeaderProps) {
     <AnimatePresence>
       {isContextModalOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
           onClick={() => setIsContextModalOpen(false)}
         >
           <motion.div 
@@ -102,16 +105,23 @@ export default function StudentHeader({ student }: StudentHeaderProps) {
               <h3 className="text-xl font-medium text-gray-800">Student Context</h3>
               <button 
                 onClick={() => setIsContextModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-full hover:bg-gray-100"
                 aria-label="Close"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
             
-            <div className="max-h-[60vh] overflow-y-auto pr-2">
+            <div className="max-h-[60vh] overflow-y-auto pr-2 pb-2 custom-scrollbar">
+              {contextError && (
+                <div className="mb-4 p-4 bg-red-50 text-red-600 rounded-lg flex items-start">
+                  <AlertTriangle className="h-5 w-5 flex-shrink-0 mr-2 mt-0.5" />
+                  <p>{contextError}</p>
+                </div>
+              )}
+              
               {isGenerating ? (
-                <div className="animate-pulse space-y-2">
+                <div className="animate-pulse space-y-3 p-4 bg-gray-50 rounded-lg">
                   <div className="h-4 bg-gray-200 rounded w-3/4"></div>
                   <div className="h-4 bg-gray-200 rounded w-5/6"></div>
                   <div className="h-4 bg-gray-200 rounded w-2/3"></div>
@@ -119,21 +129,28 @@ export default function StudentHeader({ student }: StudentHeaderProps) {
                   <div className="h-4 bg-gray-200 rounded w-3/4"></div>
                 </div>
               ) : currentStudent.student_context ? (
-                <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-line">
+                <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-line bg-gray-50 p-4 rounded-lg border border-gray-100">
                   {currentStudent.student_context}
                 </div>
               ) : (
-                <p className="text-gray-500 italic">No context available. Generate a context to see a summary of this student's progress.</p>
+                <div className="p-4 bg-yellow-50 text-yellow-700 rounded-lg flex items-center">
+                  <AlertTriangle className="h-5 w-5 mr-2 flex-shrink-0" />
+                  <p>No context available. Generate a context to see a summary of this student's progress.</p>
+                </div>
               )}
             </div>
             
-            <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end">
+            <div className="mt-6 pt-4 border-t border-gray-100 flex justify-between items-center">
+              <p className="text-xs text-gray-500">
+                {currentStudent.student_context && 
+                  "This context is AI-generated based on the student's tasks, notes, and progress."}
+              </p>
               <motion.button
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={handleGenerateContext}
                 disabled={isGenerating}
-                className="flex items-center px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50"
+                className="flex items-center px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
                 {isGenerating ? 'Generating...' : 'Regenerate Context'}
@@ -213,7 +230,17 @@ export default function StudentHeader({ student }: StudentHeaderProps) {
     >
       <div className="flex flex-col md:flex-row md:justify-between md:items-start max-w-screen-2xl mx-auto">
         <div>
-          <h1 className="text-xl md:text-2xl font-light text-gray-800">{currentStudent.name}</h1>
+          <div className="flex items-center flex-wrap gap-2">
+            <h1 className="text-xl md:text-2xl font-light text-gray-800">{currentStudent.name}</h1>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={toggleContextModal}
+              className="inline-flex items-center px-3 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+            >
+              <span>Context</span>
+            </motion.button>
+          </div>
           <div className="flex flex-wrap items-center mt-2 gap-3 md:gap-4 text-sm text-gray-500">
             <div className="flex items-center">
               <GraduationCap className="h-4 w-4 mr-1.5 text-gray-400" />
@@ -261,46 +288,6 @@ export default function StudentHeader({ student }: StudentHeaderProps) {
         </div>
       </div>
       
-      <div className="mt-5 md:mt-6 bg-gray-50 rounded-lg p-4 max-w-screen-2xl mx-auto">
-        <div className="flex justify-between items-start">
-          <h3 className="text-sm font-medium text-gray-700 mb-2">Student Context</h3>
-          <div className="flex space-x-2">
-            <motion.button 
-              onClick={toggleContextModal}
-              className="flex items-center text-xs text-indigo-600 hover:text-indigo-800 transition-colors duration-200"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              aria-label="View full context"
-            >
-              <ExternalLink className="h-3 w-3 mr-1.5" />
-              View Full Context
-            </motion.button>
-            <motion.button 
-              onClick={handleGenerateContext}
-              disabled={isGenerating}
-              className="flex items-center text-xs text-gray-500 hover:text-gray-700 transition-colors duration-200"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <RefreshCw className={`h-3 w-3 mr-1.5 ${isGenerating ? 'animate-spin' : ''}`} />
-              Generate
-            </motion.button>
-          </div>
-        </div>
-        
-        {isGenerating ? (
-          <div className="animate-pulse">
-            <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-          </div>
-        ) : (
-          <p className="text-sm text-gray-600 leading-relaxed line-clamp-3">
-            {currentStudent.student_context || 'No context available. Click "Generate" to create a summary.'}
-          </p>
-        )}
-      </div>
-
       {/* Student Context Modal */}
       <ContextModal />
 

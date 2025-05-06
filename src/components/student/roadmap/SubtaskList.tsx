@@ -4,7 +4,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Subtask, Student } from '../../../types/types';
 import { supabase } from '../../../lib/supabase';
-import { Check, Clock, Play, AlertCircle, X, MessageSquare, ChevronDown, Calendar, User, Trash2, Users } from 'lucide-react';
+import { 
+  Check, Clock, Play, AlertCircle, X, MessageSquare, ChevronDown, Calendar, 
+  User, Trash2, Users, GripVertical, Loader 
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { useGenerateContext } from '../../../hooks/useGenerateContext';
@@ -13,6 +16,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { format, parseISO } from 'date-fns';
 import { useAuth } from '../../../context/AuthContext';
 import SubtaskOwnerSelect from '../SubtaskOwnerSelect';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 interface SubtaskListProps {
   subtasks: Subtask[];
@@ -252,11 +256,29 @@ export default function SubtaskList({ subtasks, studentId, taskId, onSubtaskUpda
   const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isReordering, setIsReordering] = useState(false);
+  const [orderedSubtasks, setOrderedSubtasks] = useState<Subtask[]>([]);
   const statusButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const { counsellor } = useAuth();
   
   // Get the context generation function from our custom hook
   const { generateContext } = useGenerateContext();
+  
+  // Initialize ordered subtasks
+  useEffect(() => {
+    // Sort by sequence if available, otherwise by created_at
+    const sorted = [...subtasks].sort((a, b) => {
+      if (a.sequence !== undefined && b.sequence !== undefined) {
+        return a.sequence - b.sequence;
+      }
+      // Fallback to created_at
+      const dateA = a.created_at ? new Date(a.created_at) : new Date(0);
+      const dateB = b.created_at ? new Date(b.created_at) : new Date(0);
+      return dateA.getTime() - dateB.getTime();
+    });
+    
+    setOrderedSubtasks(sorted);
+  }, [subtasks]);
   
   // Fetch student data for the dropdown
   useEffect(() => {
@@ -491,19 +513,55 @@ export default function SubtaskList({ subtasks, studentId, taskId, onSubtaskUpda
     }
   };
 
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
+  // Handle drag and drop reordering
+  const handleDragEnd = async (result: any) => {
+    const { destination, source } = result;
+    
+    // If dropped outside the list or no change in position
+    if (!destination || 
+        (destination.droppableId === source.droppableId && 
+         destination.index === source.index)) {
+      return;
     }
-  };
-
-  const item = {
-    hidden: { opacity: 0, y: 10 },
-    show: { opacity: 1, y: 0 }
+    
+    // Create new ordered array
+    const newItems = Array.from(orderedSubtasks);
+    const [removed] = newItems.splice(source.index, 1);
+    newItems.splice(destination.index, 0, removed);
+    
+    // Update the local state immediately for responsive UI
+    setOrderedSubtasks(newItems);
+    
+    // Update all sequences in the database
+    setIsReordering(true);
+    try {
+      // Prepare batch updates for all affected subtasks
+      const updates = newItems.map((subtask, index) => ({
+        id: subtask.id,
+        sequence: index + 1 // Start from 1 for better readability
+      }));
+      
+      // Create an array of promises to update each subtask
+      const promises = updates.map(item => 
+        supabase
+          .from('student_subtasks')
+          .update({ sequence: item.sequence })
+          .eq('id', item.id)
+          .eq('student_id', studentId)
+      );
+      
+      // Wait for all updates to complete
+      await Promise.all(promises);
+      
+      // Refresh subtasks to get updated data
+      onSubtaskUpdate();
+    } catch (error) {
+      console.error('Error reordering subtasks:', error);
+      // If error, revert back to original order
+      setOrderedSubtasks(subtasks);
+    } finally {
+      setIsReordering(false);
+    }
   };
 
   if (subtasks.length === 0) {
@@ -516,140 +574,166 @@ export default function SubtaskList({ subtasks, studentId, taskId, onSubtaskUpda
 
   return (
     <>
-      <motion.ul 
-        className="space-y-3 py-2"
-        variants={container}
-        initial="hidden"
-        animate="show"
-      >
-        {subtasks.map(subtask => (
-          <motion.li 
-            key={subtask.id} 
-            className="flex flex-col bg-white rounded-lg shadow-sm border border-gray-100 overflow-visible"
-            variants={item}
-            onMouseEnter={() => setHoveredSubtask(subtask.id)}
-            onMouseLeave={() => setHoveredSubtask(null)}
-            onClick={() => handleSubtaskClick(subtask.id)}
-          >
-            <div className="p-3">
-              <div className="flex flex-col space-y-3">
-                {/* Group 1: Subtask Name */}
-                <div className="flex items-start min-w-0">
-                  {editingSubtaskId === subtask.id ? (
-                    <input
-                      type="text"
-                      defaultValue={subtask.name}
-                      autoFocus
-                      className="text-sm font-medium text-gray-700 border-b border-gray-300 focus:outline-none focus:border-gray-500 bg-transparent w-full"
-                      onBlur={(e) => handleNameChange(subtask.id, e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleNameChange(subtask.id, e.currentTarget.value);
-                        } else if (e.key === 'Escape') {
-                          setEditingSubtaskId(null);
-                        }
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  ) : (
-                    <div className="flex items-start flex-1 min-w-0 w-full break-words">
-                      <span 
-                        className="text-sm font-medium text-gray-700 cursor-pointer hover:underline break-words w-full"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingSubtaskId(subtask.id);
-                        }}
-                      >
-                        {subtask.name}
-                      </span>
-                      {subtask.remark && (
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleSubtaskDetails(subtask.id);
-                          }}
-                          className="ml-2 text-gray-400 hover:text-gray-600 flex-shrink-0"
-                          title="View remark"
-                        >
-                          <MessageSquare className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                    </div>
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <Droppable droppableId={`task-${taskId}`}>
+          {(provided) => (
+            <ul 
+              className="space-y-3 py-2"
+              ref={provided.innerRef}
+              {...provided.droppableProps}
+            >
+              {orderedSubtasks.map((subtask, index) => (
+                <Draggable key={subtask.id} draggableId={subtask.id} index={index}>
+                  {(provided, snapshot) => (
+                    <motion.li 
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      className={`flex flex-col bg-white rounded-lg shadow-sm border border-gray-100 overflow-visible ${
+                        snapshot.isDragging ? 'shadow-md' : ''
+                      }`}
+                      onMouseEnter={() => setHoveredSubtask(subtask.id)}
+                      onMouseLeave={() => setHoveredSubtask(null)}
+                      onClick={() => handleSubtaskClick(subtask.id)}
+                    >
+                      <div className="p-3">
+                        <div className="flex flex-col space-y-3">
+                          {/* Group 1: Subtask Name with Drag Handle */}
+                          <div className="flex items-start min-w-0">
+                            <div 
+                              {...provided.dragHandleProps}
+                              className="mr-2 cursor-grab flex items-center flex-shrink-0 text-gray-300 hover:text-gray-500 transition-colors"
+                            >
+                              <GripVertical className="h-4 w-4" />
+                            </div>
+                            
+                            {editingSubtaskId === subtask.id ? (
+                              <input
+                                type="text"
+                                defaultValue={subtask.name}
+                                autoFocus
+                                className="text-sm font-medium text-gray-700 border-b border-gray-300 focus:outline-none focus:border-gray-500 bg-transparent w-full"
+                                onBlur={(e) => handleNameChange(subtask.id, e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    handleNameChange(subtask.id, e.currentTarget.value);
+                                  } else if (e.key === 'Escape') {
+                                    setEditingSubtaskId(null);
+                                  }
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            ) : (
+                              <div className="flex items-start flex-1 min-w-0 w-full break-words">
+                                <span 
+                                  className="text-sm font-medium text-gray-700 cursor-pointer hover:underline break-words w-full"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingSubtaskId(subtask.id);
+                                  }}
+                                >
+                                  {subtask.name}
+                                </span>
+                                {subtask.remark && (
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleSubtaskDetails(subtask.id);
+                                    }}
+                                    className="ml-2 text-gray-400 hover:text-gray-600 flex-shrink-0"
+                                    title="View remark"
+                                  >
+                                    <MessageSquare className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Group 2: Status */}
+                          <div className="flex justify-between items-center">
+                            <button
+                              ref={el => statusButtonRefs.current[subtask.id] = el}
+                              onClick={(e) => toggleDropdown(e, subtask.id)}
+                              className={`flex items-center justify-between px-3 py-1.5 rounded-lg text-sm border ${getStatusColor(subtask.status)} hover:shadow-sm transition-all min-w-[140px]`}
+                            >
+                              <span className="flex items-center">
+                                <span className="mr-1.5">{getStatusIcon(subtask.status)}</span>
+                                <span>{getStatusText(subtask.status)}</span>
+                              </span>
+                              <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${openDropdown === subtask.id ? 'rotate-180' : ''}`} />
+                            </button>
+                            
+                            {/* Delete button */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteSubtask(subtask.id);
+                              }}
+                              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-gray-100 rounded-full transition-colors"
+                              title="Delete subtask"
+                              aria-label="Delete subtask"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                          
+                          {/* Group 3: ETA and Owner on separate row for mobile */}
+                          <div className="flex flex-wrap md:flex-nowrap items-center gap-2 text-xs">
+                            <div className="flex items-center min-w-[130px]" onClick={(e) => e.stopPropagation()}>
+                              <Calendar className="h-3.5 w-3.5 text-gray-400 mr-1.5 flex-shrink-0" />
+                              <DatePicker 
+                                selected={subtask.eta ? parseISO(subtask.eta) : null}
+                                onChange={(date) => handleEtaChange(subtask.id, date)}
+                                dateFormat="MMM d, yyyy"
+                                className="text-xs rounded border border-gray-200 py-1 px-2 focus:outline-none focus:ring-1 focus:ring-gray-300 w-24 md:w-28"
+                                placeholderText="Set date"
+                                isClearable
+                              />
+                            </div>
+                            
+                            <div className="flex items-center flex-1" onClick={(e) => e.stopPropagation()}>
+                              <SubtaskOwnerSelect
+                                currentOwners={subtask.owner}
+                                student={student}
+                                onOwnersChange={(owners) => handleOwnersChange(subtask.id, owners)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Expanded details section with remark */}
+                      <AnimatePresence>
+                        {expandedSubtasks[subtask.id] && subtask.remark && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden bg-gray-50 border-t border-gray-100"
+                          >
+                            <div className="p-3 text-xs text-gray-600">
+                              <p className="italic break-words">{subtask.remark}</p>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.li>
                   )}
+                </Draggable>
+              ))}
+              {provided.placeholder}
+              
+              {/* Loading indicator for reordering */}
+              {isReordering && (
+                <div className="flex justify-center py-2">
+                  <Loader className="animate-spin h-5 w-5 text-gray-400" />
                 </div>
-                
-                {/* Group 2: Status */}
-                <div className="flex justify-between items-center">
-                  <button
-                    ref={el => statusButtonRefs.current[subtask.id] = el}
-                    onClick={(e) => toggleDropdown(e, subtask.id)}
-                    className={`flex items-center justify-between px-3 py-1.5 rounded-lg text-sm border ${getStatusColor(subtask.status)} hover:shadow-sm transition-all min-w-[140px]`}
-                  >
-                    <span className="flex items-center">
-                      <span className="mr-1.5">{getStatusIcon(subtask.status)}</span>
-                      <span>{getStatusText(subtask.status)}</span>
-                    </span>
-                    <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${openDropdown === subtask.id ? 'rotate-180' : ''}`} />
-                  </button>
-                  
-                  {/* Delete button */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteSubtask(subtask.id);
-                    }}
-                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-gray-100 rounded-full transition-colors"
-                    title="Delete subtask"
-                    aria-label="Delete subtask"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-                
-                {/* Group 3: ETA and Owner on separate row for mobile */}
-                <div className="flex flex-wrap md:flex-nowrap items-center gap-2 text-xs">
-                  <div className="flex items-center min-w-[130px]" onClick={(e) => e.stopPropagation()}>
-                    <Calendar className="h-3.5 w-3.5 text-gray-400 mr-1.5 flex-shrink-0" />
-                    <DatePicker 
-                      selected={subtask.eta ? parseISO(subtask.eta) : null}
-                      onChange={(date) => handleEtaChange(subtask.id, date)}
-                      dateFormat="MMM d, yyyy"
-                      className="text-xs rounded border border-gray-200 py-1 px-2 focus:outline-none focus:ring-1 focus:ring-gray-300 w-24 md:w-28"
-                      placeholderText="Set date"
-                      isClearable
-                    />
-                  </div>
-                  
-                  <div className="flex items-center flex-1" onClick={(e) => e.stopPropagation()}>
-                    <SubtaskOwnerSelect
-                      currentOwners={subtask.owner}
-                      student={student}
-                      onOwnersChange={(owners) => handleOwnersChange(subtask.id, owners)}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Expanded details section with remark */}
-            <AnimatePresence>
-              {expandedSubtasks[subtask.id] && subtask.remark && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden bg-gray-50 border-t border-gray-100"
-                >
-                  <div className="p-3 text-xs text-gray-600">
-                    <p className="italic break-words">{subtask.remark}</p>
-                  </div>
-                </motion.div>
               )}
-            </AnimatePresence>
-          </motion.li>
-        ))}
-      </motion.ul>
+            </ul>
+          )}
+        </Droppable>
+      </DragDropContext>
       
       {/* Dropdown Menu - Rendered outside any container via portal */}
       {openDropdown && (
@@ -657,7 +741,7 @@ export default function SubtaskList({ subtasks, studentId, taskId, onSubtaskUpda
           subtaskId={openDropdown}
           position={dropdownPosition}
           onStatusSelect={openRemarkModal}
-          currentRemark={subtasks.find(s => s.id === openDropdown)?.remark}
+          currentRemark={orderedSubtasks.find(s => s.id === openDropdown)?.remark}
           onClose={() => setOpenDropdown(null)}
         />
       )}

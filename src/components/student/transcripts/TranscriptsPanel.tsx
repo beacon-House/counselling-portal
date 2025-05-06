@@ -1,17 +1,16 @@
 /**
- * Notes panel component
- * Displays and manages notes for a student/phase/task with full-screen editing capability
- * Updated to focus exclusively on standard notes (not transcripts)
+ * Transcripts panel component
+ * Displays and manages transcript notes for a student/phase/task with full-screen editing capability
  */
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { Note } from '../../../types/types';
-import { Loader, X, Search, Calendar, Plus, FileText } from 'lucide-react';
-import NoteItem from './NoteItem';
-import NoteDetails from './NoteDetails';
+import { Loader, X, Search, Calendar, Plus, MessageSquare } from 'lucide-react';
+import NoteItem from '../notes/NoteItem';
+import NoteDetails from '../notes/NoteDetails';
 import { motion, AnimatePresence } from 'framer-motion';
 
-interface NotesPanelProps {
+interface TranscriptsPanelProps {
   studentId: string;
   phaseId: string | null;
   taskId: string | null;
@@ -22,7 +21,7 @@ interface NotesPanelProps {
   setSelectedNote?: (note: Note | null) => void;
 }
 
-export default function NotesPanel({ 
+export default function TranscriptsPanel({ 
   studentId, 
   phaseId, 
   taskId,
@@ -31,8 +30,8 @@ export default function NotesPanel({
   selectedNote = null,
   setIsDetailView = () => {},
   setSelectedNote = () => {}
-}: NotesPanelProps) {
-  const [notes, setNotes] = useState<Note[]>([]);
+}: TranscriptsPanelProps) {
+  const [transcripts, setTranscripts] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -40,7 +39,7 @@ export default function NotesPanel({
   const [localSelectedNote, setLocalSelectedNote] = useState<Note | null>(selectedNote);
   
   useEffect(() => {
-    fetchNotes();
+    fetchTranscripts();
   }, [studentId, phaseId, taskId, subtaskId]);
 
   // Sync local and parent state
@@ -49,7 +48,7 @@ export default function NotesPanel({
     setLocalSelectedNote(selectedNote);
   }, [isDetailView, selectedNote]);
 
-  const fetchNotes = async () => {
+  const fetchTranscripts = async () => {
     setLoading(true);
     try {
       let query = supabase
@@ -59,7 +58,7 @@ export default function NotesPanel({
           editor:updated_by(name)
         `)
         .eq('student_id', studentId)
-        .eq('type', 'text') // Only fetch standard notes, not transcripts
+        .eq('type', 'transcript') // Only fetch transcript notes
         .order('created_at', { ascending: false });
       
       if (phaseId) {
@@ -73,34 +72,34 @@ export default function NotesPanel({
       const { data, error } = await query;
       
       if (error) throw error;
-      setNotes(data as Note[]);
+      setTranscripts(data as Note[]);
     } catch (error) {
-      console.error('Error fetching notes:', error);
-      setError('Failed to load notes. Please try again.');
+      console.error('Error fetching transcripts:', error);
+      setError('Failed to load transcripts. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreateNote = () => {
+  const handleCreateTranscript = () => {
     setLocalSelectedNote(null);
     setLocalIsDetailView(true);
     setIsDetailView(true);
     setSelectedNote(null);
   };
   
-  const handleViewNote = (note: Note) => {
-    setLocalSelectedNote(note);
+  const handleViewTranscript = (transcript: Note) => {
+    setLocalSelectedNote(transcript);
     setLocalIsDetailView(true);
     setIsDetailView(true);
-    setSelectedNote(note);
+    setSelectedNote(transcript);
   };
   
-  const handleEditNote = (note: Note) => {
-    setLocalSelectedNote(note);
+  const handleEditTranscript = (transcript: Note) => {
+    setLocalSelectedNote(transcript);
     setLocalIsDetailView(true);
     setIsDetailView(true);
-    setSelectedNote(note);
+    setSelectedNote(transcript);
   };
   
   const handleCloseDetail = () => {
@@ -109,36 +108,34 @@ export default function NotesPanel({
     setIsDetailView(false);
     setSelectedNote(null);
     
-    // Refresh notes to get up-to-date data
-    fetchNotes();
+    // Refresh transcripts to get up-to-date task processing info
+    fetchTranscripts();
   };
   
-  const handleSaveNote = (note: Note) => {
-    const isNewNote = !localSelectedNote?.id;
+  const handleSaveTranscript = (transcript: Note) => {
+    const isNewTranscript = !localSelectedNote?.id;
     
-    if (isNewNote) {
-      // Add new note to list
-      setNotes([note, ...notes]);
+    if (isNewTranscript) {
+      // Add new transcript to list
+      setTranscripts([transcript, ...transcripts]);
     } else {
-      // Update existing note in list
-      setNotes(notes.map(n => n.id === note.id ? note : n));
+      // Update existing transcript in list
+      setTranscripts(transcripts.map(t => t.id === transcript.id ? transcript : t));
     }
     
-    setLocalIsDetailView(false);
-    setLocalSelectedNote(null);
-    setIsDetailView(false);
-    setSelectedNote(null);
+    // Don't automatically close the detail view for transcripts
+    // Let the user decide to process or close
   };
   
-  const handleDeleteNote = (noteId: string) => {
-    setNotes(notes.filter(n => n.id !== noteId));
+  const handleDeleteTranscript = (transcriptId: string) => {
+    setTranscripts(transcripts.filter(t => t.id !== transcriptId));
   };
   
-  // Filter notes by search term
-  const filteredNotes = notes.filter(note => {
+  // Filter transcripts by search term
+  const filteredTranscripts = transcripts.filter(transcript => {
     const matchesSearch = 
-      (note.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (note.content || '').toLowerCase().includes(searchTerm.toLowerCase());
+      (transcript.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (transcript.content || '').toLowerCase().includes(searchTerm.toLowerCase());
     
     return matchesSearch;
   });
@@ -156,8 +153,8 @@ export default function NotesPanel({
     }
   };
   
-  // Group notes by date (today, yesterday, this week, earlier)
-  const groupNotesByDate = (notes: Note[]) => {
+  // Group transcripts by date (today, yesterday, this week, earlier)
+  const groupTranscriptsByDate = (transcripts: Note[]) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
@@ -174,22 +171,22 @@ export default function NotesPanel({
       'Earlier': [],
     };
     
-    notes.forEach(note => {
-      const noteDate = new Date(note.created_at);
-      noteDate.setHours(0, 0, 0, 0);
+    transcripts.forEach(transcript => {
+      const transcriptDate = new Date(transcript.created_at);
+      transcriptDate.setHours(0, 0, 0, 0);
       
-      if (noteDate.getTime() === today.getTime()) {
-        grouped['Today'].push(note);
-      } else if (noteDate.getTime() === yesterday.getTime()) {
-        grouped['Yesterday'].push(note);
-      } else if (noteDate > thisWeekStart) {
-        grouped['This Week'].push(note);
+      if (transcriptDate.getTime() === today.getTime()) {
+        grouped['Today'].push(transcript);
+      } else if (transcriptDate.getTime() === yesterday.getTime()) {
+        grouped['Yesterday'].push(transcript);
+      } else if (transcriptDate > thisWeekStart) {
+        grouped['This Week'].push(transcript);
       } else {
-        grouped['Earlier'].push(note);
+        grouped['Earlier'].push(transcript);
       }
     });
     
-    return Object.entries(grouped).filter(([_, notes]) => notes.length > 0);
+    return Object.entries(grouped).filter(([_, transcripts]) => transcripts.length > 0);
   };
 
   // If in detail view, render NoteDetails component
@@ -201,10 +198,10 @@ export default function NotesPanel({
         phaseId={phaseId}
         taskId={taskId}
         onClose={handleCloseDetail}
-        onSave={handleSaveNote}
-        onDelete={handleDeleteNote}
+        onSave={handleSaveTranscript}
+        onDelete={handleDeleteTranscript}
         isNewNote={!localSelectedNote?.id}
-        isTranscript={false} // Always standard notes in this panel
+        isTranscript={true} // Always transcripts in this panel
       />
     );
   }
@@ -212,7 +209,7 @@ export default function NotesPanel({
   return (
     <div className="p-4 md:p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg md:text-xl font-light text-gray-800">Notes {getContextText()}</h2>
+        <h2 className="text-lg md:text-xl font-light text-gray-800">Transcripts {getContextText()}</h2>
       </div>
       
       {error && (
@@ -232,7 +229,7 @@ export default function NotesPanel({
         <div className="relative flex-1">
           <input
             type="text"
-            placeholder="Search notes..."
+            placeholder="Search transcripts..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-300 bg-gray-50"
@@ -244,43 +241,43 @@ export default function NotesPanel({
           <motion.button
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
-            onClick={handleCreateNote}
+            onClick={handleCreateTranscript}
             className="px-4 py-3 rounded-lg bg-gray-800 text-white flex items-center hover:bg-gray-700 transition-colors whitespace-nowrap"
           >
             <Plus className="h-4 w-4 mr-2" />
-            New Note
+            New Transcript
           </motion.button>
         </div>
       </div>
       
-      {/* Notes Grid Layout */}
+      {/* Transcripts Grid Layout */}
       <div>
         {loading ? (
           <div className="flex justify-center py-10">
             <Loader className="animate-spin h-8 w-8 text-gray-300" />
           </div>
-        ) : filteredNotes.length > 0 ? (
+        ) : filteredTranscripts.length > 0 ? (
           <div className="space-y-8">
-            {groupNotesByDate(filteredNotes).map(([dateGroup, groupNotes]) => (
+            {groupTranscriptsByDate(filteredTranscripts).map(([dateGroup, groupTranscripts]) => (
               <div key={dateGroup}>
                 <h3 className="text-sm font-medium text-gray-500 mb-4 flex items-center">
                   <Calendar className="h-4 w-4 mr-2" />
                   {dateGroup}
                 </h3>
                 
-                {/* Responsive grid layout for notes */}
+                {/* Responsive grid layout for transcripts */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {groupNotes.map((note) => (
+                  {groupTranscripts.map((transcript) => (
                     <motion.div
-                      key={note.id}
+                      key={transcript.id}
                       whileHover={{ y: -2 }}
                       transition={{ duration: 0.2 }}
-                      onClick={() => handleViewNote(note)}
+                      onClick={() => handleViewTranscript(transcript)}
                       className="cursor-pointer h-full flex"
                     >
                       <NoteItem 
-                        note={note} 
-                        onEdit={handleEditNote}
+                        note={transcript} 
+                        onEdit={handleEditTranscript}
                       />
                     </motion.div>
                   ))}
@@ -294,14 +291,16 @@ export default function NotesPanel({
             animate={{ opacity: 1 }}
             className="text-center py-10 md:py-12 bg-gray-50 rounded-lg border border-gray-100"
           >
-            <h3 className="text-gray-600 font-medium mb-1">No notes yet</h3>
-            <p className="text-gray-500 mb-5">Create your first note to get started</p>
+            <h3 className="text-gray-600 font-medium mb-1">No transcripts yet</h3>
+            <p className="text-gray-500 mb-5">
+              Upload meeting transcripts to automatically extract action items and create subtasks.
+            </p>
             <button
-              onClick={handleCreateNote}
+              onClick={handleCreateTranscript}
               className="mx-auto px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 flex items-center justify-center"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Add Note
+              Add Transcript
             </button>
           </motion.div>
         )}

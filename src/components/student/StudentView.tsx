@@ -8,10 +8,11 @@ import { supabase } from '../../lib/supabase';
 import { Student, Phase, Task, Note } from '../../types/types';
 import RoadmapView from './roadmap/RoadmapView';
 import NotesPanel from './notes/NotesPanel';
+import TranscriptsPanel from './transcripts/TranscriptsPanel';
 import FilesPanel from './files/FilesPanel';
 import TasksWithDeadlines from './TasksWithDeadlines';
 import StudentHeader from './StudentHeader';
-import { Layers, FileText, FolderOpen, Calendar } from 'lucide-react';
+import { Layers, FileText, FolderOpen, Calendar, MessageSquare } from 'lucide-react';
 import FloatingActionButton from './FloatingActionButton';
 import { motion } from 'framer-motion';
 import { useGenerateContext } from '../../hooks/useGenerateContext';
@@ -32,9 +33,9 @@ export default function StudentView() {
   const [error, setError] = useState<string | null>(null);
   const [activePhaseId, setActivePhaseId] = useState<string | null>(null);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'roadmap' | 'notes' | 'files' | 'deadlines'>('roadmap');
+  const [activeTab, setActiveTab] = useState<'roadmap' | 'transcript' | 'files' | 'notes' | 'deadlines'>('roadmap');
   
-  // Detail view state for notes
+  // Detail view state for notes and transcripts
   const [isDetailView, setIsDetailView] = useState(false);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   
@@ -173,6 +174,24 @@ export default function StudentView() {
     
     return `Add note to: ${selectedContext.name}`;
   };
+
+  // Handle adding a transcript from the FAB
+  const handleAddTranscript = () => {
+    // Switch to transcript tab
+    setActiveTab('transcript');
+    
+    // Set up the transcript creation state
+    setActivePhaseId(selectedContext.phaseId);
+    setActiveTaskId(selectedContext.taskId);
+    
+    // Delay to ensure the tab switch completes
+    setTimeout(() => {
+      setIsDetailView(true);
+      setSelectedNote(null);
+    }, 10);
+    
+    setIsFabOpen(false);
+  };
   
   // Update student state when context is refreshed
   const refreshStudentData = async () => {
@@ -256,15 +275,15 @@ export default function StudentView() {
                   Roadmap
                 </button>
                 <button
-                  onClick={() => setActiveTab('notes')}
+                  onClick={() => setActiveTab('transcript')}
                   className={`flex items-center py-3 px-3 md:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                    activeTab === 'notes'
+                    activeTab === 'transcript'
                       ? 'border-gray-800 text-gray-800'
                       : 'border-transparent text-gray-500 hover:text-gray-700'
                   }`}
                 >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Notes
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Transcripts
                 </button>
                 <button
                   onClick={() => setActiveTab('files')}
@@ -276,6 +295,17 @@ export default function StudentView() {
                 >
                   <FolderOpen className="h-4 w-4 mr-2" />
                   Files
+                </button>
+                <button
+                  onClick={() => setActiveTab('notes')}
+                  className={`flex items-center py-3 px-3 md:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                    activeTab === 'notes'
+                      ? 'border-gray-800 text-gray-800'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Notes
                 </button>
                 <button
                   onClick={() => setActiveTab('deadlines')}
@@ -308,6 +338,23 @@ export default function StudentView() {
                   setActivePhaseId={setActivePhaseId}
                   setActiveTaskId={setActiveTaskId}
                   onOpenFab={handleOpenFab}
+                />
+              </motion.div>
+            ) : activeTab === 'transcript' ? (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+                className="w-full overflow-auto"
+              >
+                <TranscriptsPanel 
+                  studentId={studentId || ''} 
+                  phaseId={activePhaseId} 
+                  taskId={activeTaskId}
+                  isDetailView={isDetailView}
+                  selectedNote={selectedNote}
+                  setIsDetailView={setIsDetailView}
+                  setSelectedNote={setSelectedNote}
                 />
               </motion.div>
             ) : activeTab === 'notes' ? (
@@ -361,6 +408,7 @@ export default function StudentView() {
               isOpen={isFabOpen}
               toggleOpen={() => setIsFabOpen(!isFabOpen)}
               onAddNote={handleAddNote}
+              onAddTranscript={handleAddTranscript}
               onUploadFile={handleUploadFile}
               contextText={getContextText()}
             />

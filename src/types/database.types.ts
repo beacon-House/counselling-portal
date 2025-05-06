@@ -161,6 +161,7 @@ export interface Database {
           remark: string | null
           eta: string | null
           owner: string[] | null  // Changed from string to string[]
+          sequence: number | null // Added for drag and drop reordering
         }
         Insert: {
           id?: string
@@ -172,6 +173,7 @@ export interface Database {
           remark?: string | null
           eta?: string | null
           owner?: string[] | null  // Changed from string to string[]
+          sequence?: number | null // Added for drag and drop reordering
         }
         Update: {
           id?: string
@@ -183,6 +185,7 @@ export interface Database {
           remark?: string | null
           eta?: string | null
           owner?: string[] | null  // Changed from string to string[]
+          sequence?: number | null // Added for drag and drop reordering
         }
         Relationships: [
           {

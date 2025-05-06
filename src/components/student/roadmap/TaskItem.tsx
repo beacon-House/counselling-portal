@@ -43,13 +43,19 @@ export default function TaskItem({
   const createNewSubtask = async () => {
     setIsCreatingSubtask(true);
     try {
+      // Find the highest sequence number already in use
+      const maxSequence = subtasks.length > 0 
+        ? Math.max(...subtasks.filter(s => s.sequence !== undefined).map(s => s.sequence || 0)) 
+        : 0;
+      
       const { data, error } = await supabase
         .from('student_subtasks')
         .insert({
           name: "New Subtask", // Default name
           student_id: studentId,
           task_id: task.id,
-          status: 'yet_to_start'
+          status: 'yet_to_start',
+          sequence: maxSequence + 1 // Add to the end
         })
         .select()
         .single();

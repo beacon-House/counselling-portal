@@ -39,6 +39,7 @@ export interface Subtask {
   remark?: string;
   eta?: string; // timestamp for expected completion date
   owner?: string[] | null; // Changed from string to string[] for multiple owners
+  sequence?: number; // Added for drag and drop reordering
 }
 
 export interface Student {

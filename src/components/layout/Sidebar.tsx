@@ -125,10 +125,10 @@ export default function Sidebar() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.9 }}
             onClick={handleCreateStudent}
-            className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200 transition-all duration-200"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
             aria-label="Add student"
           >
-            <Plus className="h-4 w-4 text-gray-600" />
+            <Plus className="h-5 w-5 stroke-[2.5]" />
           </motion.button>
         </div>
         

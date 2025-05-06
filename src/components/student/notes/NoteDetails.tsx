@@ -19,6 +19,7 @@ interface NoteDetailsProps {
   onSave: (newNote: Note) => void;
   onDelete?: (noteId: string) => void;
   isNewNote?: boolean;
+  isTranscript?: boolean; // New prop to determine if creating a transcript
 }
 
 export default function NoteDetails({
@@ -29,11 +30,11 @@ export default function NoteDetails({
   onClose,
   onSave,
   onDelete,
-  isNewNote = false
+  isNewNote = false,
+  isTranscript = false // Default to standard note
 }: NoteDetailsProps) {
   const [title, setTitle] = useState<string>(note?.title || '');
   const [content, setContent] = useState<string>(note?.content || '');
-  const [noteType, setNoteType] = useState<string>(note?.type || 'text');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -50,7 +51,6 @@ export default function NoteDetails({
     if (note) {
       setTitle(note.title || '');
       setContent(note.content || '');
-      setNoteType(note.type || 'text');
     }
   }, [note]);
   
@@ -76,11 +76,6 @@ export default function NoteDetails({
     setError(null);
     
     try {
-      // Validate for transcript type
-      if (noteType === 'transcript' && !content.trim()) {
-        throw new Error("Transcript content cannot be empty");
-      }
-      
       // Save note
       const noteData: Partial<Note> = {
         id: note?.id, // Will be undefined for new notes
@@ -89,7 +84,7 @@ export default function NoteDetails({
         task_id: taskId,
         title: title || null,
         content: content || '',
-        type: noteType as 'text' | 'transcript',
+        type: isTranscript ? 'transcript' : 'text', // Set type based on isTranscript prop
         updated_by: counsellor.id, // Add counsellor ID for edit tracking
       };
       
@@ -132,9 +127,10 @@ export default function NoteDetails({
       setSavedNote(savedNote);
       setNoteSaved(true);
       
-      // For transcript type notes, we don't automatically show the task review anymore
-      // We'll let the user trigger it manually
-      console.log('Saved transcript note, showing task review modal:', savedNote.id);
+      // If this is a transcript, show the task review
+      if (isTranscript) {
+        console.log('Saved transcript note, showing task review modal:', savedNote.id);
+      }
     } catch (err: any) {
       console.error('Error saving note:', err);
       setError(err.message || 'Failed to save note. Please try again.');
@@ -169,7 +165,7 @@ export default function NoteDetails({
   
   const handleProcessTranscript = () => {
     // Only allow processing if note is saved and is a transcript
-    if (savedNoteId && noteType === 'transcript') {
+    if (savedNoteId && isTranscript) {
       setIsShowingTaskReview(true);
     } else {
       setError('Please save the transcript first');
@@ -195,9 +191,9 @@ export default function NoteDetails({
             transition={{ duration: 0.2 }}
             className="bg-white rounded-xl shadow-lg p-5 md:p-6 w-full max-w-md"
           >
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Delete Note</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Delete {isTranscript ? 'Transcript' : 'Note'}</h3>
             <p className="text-gray-600 mb-6">
-              Are you sure you want to delete this note? This action cannot be undone.
+              Are you sure you want to delete this {isTranscript ? 'transcript' : 'note'}? This action cannot be undone.
             </p>
             <div className="flex flex-col xs:flex-row justify-end space-y-3 xs:space-y-0 xs:space-x-4">
               <button
@@ -229,7 +225,7 @@ export default function NoteDetails({
 
   // Saved note confirmation for transcripts
   const SavedNoteConfirmation = () => {
-    if (!noteSaved || noteType !== 'transcript') return null;
+    if (!noteSaved || !isTranscript) return null;
     
     return (
       <div className="mx-auto w-full max-w-4xl px-4 pt-4">
@@ -271,30 +267,20 @@ export default function NoteDetails({
           </button>
           <div className="ml-2 md:ml-4 flex items-center">
             <span className="mr-3 text-gray-500">
-              {noteType === 'transcript' ? <MessageSquare className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
+              {isTranscript ? <MessageSquare className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
             </span>
             <h1 className="text-lg md:text-xl font-light text-gray-800 truncate max-w-[180px] sm:max-w-xs md:max-w-md">
-              {isNewNote ? 'New Note' : title || 'Untitled Note'}
+              {isNewNote ? (isTranscript ? 'New Transcript' : 'New Note') : title || (isTranscript ? 'Untitled Transcript' : 'Untitled Note')}
             </h1>
           </div>
         </div>
         
         <div className="flex items-center space-x-2 md:space-x-3">
-          {/* Note Type Selector */}
-          <select
-            value={noteType}
-            onChange={(e) => setNoteType(e.target.value)}
-            className="py-1.5 md:py-2 px-2 md:px-3 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-gray-300"
-          >
-            <option value="text">Standard Note</option>
-            <option value="transcript">Meeting Transcript</option>
-          </select>
-          
           {note?.id && onDelete && (
             <button
               onClick={() => setIsDeleteModalOpen(true)}
               className="p-1.5 md:p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500 hover:text-red-500"
-              title="Delete note"
+              title={`Delete ${isTranscript ? 'transcript' : 'note'}`}
             >
               <Trash2 className="h-5 w-5" />
             </button>
@@ -329,11 +315,11 @@ export default function NoteDetails({
       {/* Saved confirmation with process button for transcripts */}
       <SavedNoteConfirmation />
       
-      {/* Note type explanation */}
+      {/* Content type explanation */}
       <div className="mx-auto w-full max-w-4xl px-4 pt-4">
         <div className="bg-gray-50 border border-gray-100 rounded-lg p-3">
           <h3 className="text-sm font-medium text-gray-700 flex items-center">
-            {noteType === 'transcript' ? (
+            {isTranscript ? (
               <>
                 <MessageSquare className="h-4 w-4 mr-2 text-gray-500" />
                 Meeting Transcript
@@ -346,7 +332,7 @@ export default function NoteDetails({
             )}
           </h3>
           <p className="text-xs text-gray-500 mt-1">
-            {noteType === 'transcript' 
+            {isTranscript 
               ? 'Enter meeting transcript text. After saving, we\'ll analyze it to extract action items that can be converted to subtasks.'
               : 'Standard note for documenting information, ideas, or observations.'}
           </p>
@@ -373,7 +359,7 @@ export default function NoteDetails({
             value={content}
             onChange={handleContentChange}
             className="w-full prose prose-lg max-w-none min-h-[calc(100vh-300px)] focus:outline-none resize-none border-0 font-inherit"
-            placeholder={noteType === 'transcript' ? 'Paste meeting transcript here...' : 'Start writing...'}
+            placeholder={isTranscript ? 'Paste meeting transcript here...' : 'Start writing...'}
             style={{ 
               whiteSpace: 'pre-wrap', 
               lineHeight: '1.5', 
