@@ -110,7 +110,7 @@ export default function AppLayout() {
           {showRightPanel && (
             <motion.div 
               initial={{ width: 0, opacity: 0 }}
-              animate={{ width: window.innerWidth < 768 ? '100%' : 320, opacity: 1 }}
+              animate={{ width: window.innerWidth < 768 ? '100%' : 480, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
               className="md:relative fixed inset-0 md:inset-auto z-40 bg-white border-l border-gray-100 shadow-lg overflow-auto"

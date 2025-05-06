@@ -525,13 +525,13 @@ progress, and recent notes if available.`;
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             placeholder="Type your query here... Use @ to mention a student"
-            className="w-full border border-gray-200 rounded-lg p-3 pr-12 min-h-[60px] max-h-[120px] md:min-h-[80px] md:max-h-[200px] resize-none focus:outline-none focus:ring-1 focus:ring-gray-300"
+            className="w-full border border-gray-200 rounded-lg p-3 pr-14 min-h-[60px] max-h-[120px] md:min-h-[80px] md:max-h-[200px] resize-none focus:outline-none focus:ring-1 focus:ring-gray-300"
           />
           
           <button
             onClick={handleSubmit}
             disabled={!inputValue.trim() || isLoading}
-            className="absolute right-2 md:right-3 bottom-2 md:bottom-3 p-2 rounded-full bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="absolute right-3 bottom-[10px] md:bottom-[14px] p-2 rounded-full bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
             aria-label="Send message"
           >
             <Send className="h-4 w-4" />
