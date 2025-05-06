@@ -4,11 +4,17 @@
  * Keeps API keys secure by handling OpenAI interactions server-side
  */
 import OpenAI from "npm:openai@4.28.0";
+import { createClient } from "npm:@supabase/supabase-js@2.39.8";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+// Supabase client setup for the edge function
+const supabaseClient = (supabaseUrl: string, supabaseKey: string) => {
+  return createClient(supabaseUrl, supabaseKey);
 };
 
 Deno.serve(async (req: Request) => {
@@ -49,6 +55,58 @@ Deno.serve(async (req: Request) => {
       apiKey: openaiApiKey,
     });
 
+    // Get Supabase connection info from environment variables
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error("Supabase URL or service role key is missing");
+    }
+    
+    const supabase = supabaseClient(supabaseUrl, supabaseKey);
+    
+    // Fetch existing subtasks for this student to avoid duplication
+    let existingSubtasks: any[] = [];
+    try {
+      const { data, error } = await supabase
+        .from('student_subtasks')
+        .select(`
+          id,
+          name,
+          status,
+          task_id,
+          tasks:task_id(
+            name,
+            phase_id,
+            phases:phase_id(
+              name
+            )
+          )
+        `)
+        .eq('student_id', studentId);
+        
+      if (error) {
+        console.error("Error fetching existing subtasks:", error);
+      } else {
+        existingSubtasks = data || [];
+        console.log(`Found ${existingSubtasks.length} existing subtasks for the student`);
+      }
+    } catch (err) {
+      console.error("Error in subtask fetch:", err);
+      // Continue with processing even if fetching subtasks fails
+    }
+
+    // Prepare context about existing subtasks to avoid duplicates
+    let existingSubtasksContext = "";
+    if (existingSubtasks.length > 0) {
+      existingSubtasksContext = "\nExisting Student Subtasks (AVOID DUPLICATING THESE):\n";
+      existingSubtasks.forEach((subtask, index) => {
+        const phase = subtask.tasks?.phases?.name || "Unknown Phase";
+        const task = subtask.tasks?.name || "Unknown Task";
+        existingSubtasksContext += `${index + 1}. "${subtask.name}" (Status: ${subtask.status}) - Under ${phase} > ${task}\n`;
+      });
+    }
+
     // Prepare context about the roadmap structure
     let roadmapContext = "Project Phases and Tasks:\n";
     
@@ -86,6 +144,10 @@ Focus on identifying:
 Use the following project structure context to help categorize tasks:
 ${roadmapContext}
 
+${existingSubtasksContext}
+
+IMPORTANT: Do not extract subtasks that already exist in the student's list. The existing subtasks are provided above. Extract only new, unique subtasks that do not duplicate any existing ones. If you find an item similar to an existing subtask, it should be discarded.
+
 For each identified subtask, provide:
 - Description: A clear, concise description of what needs to be done
 - Suggested phase: Identify which phase this best aligns with (use the phase ID)
@@ -117,21 +179,28 @@ ONLY return valid JSON. Do not include any explanatory text before or after the 
 
     // Call OpenAI API to analyze the transcript
     console.log("Calling OpenAI API...");
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'system',
-          content: systemPrompt
-        },
-        {
-          role: 'user',
-          content: `Here is the meeting transcript to analyze:\n\n${transcriptText}`
-        }
-      ],
-      temperature: 0.3,
-      response_format: { type: "json_object" }
-    });
+    let response;
+    try {
+      response = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt
+          },
+          {
+            role: 'user',
+            content: `Here is the meeting transcript to analyze:\n\n${transcriptText}`
+          }
+        ],
+        temperature: 0.3,
+        response_format: { type: "json_object" }
+      });
+    } catch (apiError: any) {
+      console.error("OpenAI API error:", apiError);
+      console.error("Error details:", apiError.stack || JSON.stringify(apiError));
+      throw new Error(`OpenAI API error: ${apiError.message || 'Unknown OpenAI error'}`);
+    }
 
     // Extract the generated tasks
     const responseContent = response.choices[0]?.message?.content || "{}";
@@ -144,10 +213,10 @@ ONLY return valid JSON. Do not include any explanatory text before or after the 
       console.log("Successfully parsed JSON response");
       extractedTasks = parsedResponse.tasks || [];
       console.log(`Found ${extractedTasks.length} tasks in response`);
-    } catch (error) {
-      console.error("Error parsing OpenAI response:", error);
+    } catch (parseError) {
+      console.error("Error parsing OpenAI response:", parseError);
       console.error("Raw response:", responseContent);
-      extractedTasks = [];
+      throw new Error(`Failed to parse AI response: ${parseError.message}, raw response: ${responseContent.substring(0, 200)}...`);
     }
     
     // Return the extracted tasks
@@ -168,13 +237,16 @@ ONLY return valid JSON. Do not include any explanatory text before or after the 
         }
       }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in process-transcript function:", error);
+    console.error("Error stack:", error.stack || "No stack trace available");
+    
     // Return a more detailed error response
     return new Response(
       JSON.stringify({ 
         error: error.message || "Failed to process transcript",
-        details: error.toString()
+        details: error.stack || JSON.stringify(error),
+        errorType: error.constructor.name
       }),
       {
         headers: { 

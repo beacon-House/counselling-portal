@@ -38,7 +38,7 @@ export interface Subtask {
   created_at: string;
   remark?: string;
   eta?: string; // timestamp for expected completion date
-  owner?: string; // text field for owner name
+  owner?: string[] | null; // Changed from string to string[] for multiple owners
 }
 
 export interface Student {
@@ -46,6 +46,7 @@ export interface Student {
   name: string;
   email: string;
   phone?: string;
+  school_name?: string; // Added school name field
   target_year: number;
   grade: string;
   curriculum: string;

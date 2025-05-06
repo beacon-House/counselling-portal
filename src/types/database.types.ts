@@ -160,7 +160,7 @@ export interface Database {
           created_at: string | null
           remark: string | null
           eta: string | null
-          owner: string | null
+          owner: string[] | null  // Changed from string to string[]
         }
         Insert: {
           id?: string
@@ -171,7 +171,7 @@ export interface Database {
           created_at?: string | null
           remark?: string | null
           eta?: string | null
-          owner?: string | null
+          owner?: string[] | null  // Changed from string to string[]
         }
         Update: {
           id?: string
@@ -182,7 +182,7 @@ export interface Database {
           created_at?: string | null
           remark?: string | null
           eta?: string | null
-          owner?: string | null
+          owner?: string[] | null  // Changed from string to string[]
         }
         Relationships: [
           {
@@ -212,6 +212,7 @@ export interface Database {
           created_at: string | null
           counsellor_id: string | null
           other_curriculum: string | null
+          school_name: string | null
         }
         Insert: {
           id?: string
@@ -225,6 +226,7 @@ export interface Database {
           created_at?: string | null
           counsellor_id?: string | null
           other_curriculum?: string | null
+          school_name?: string | null
         }
         Update: {
           id?: string
@@ -238,6 +240,7 @@ export interface Database {
           created_at?: string | null
           counsellor_id?: string | null
           other_curriculum?: string | null
+          school_name?: string | null
         }
         Relationships: [
           {

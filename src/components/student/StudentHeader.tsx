@@ -3,12 +3,13 @@
  * Displays student information and context summary
  */
 import React, { useState } from 'react';
-import { Edit, Calendar, Book, GraduationCap, RefreshCw, Trash2, AlertTriangle, ExternalLink, X } from 'lucide-react';
+import { Edit, Calendar, Book, GraduationCap, RefreshCw, Trash2, AlertTriangle, ExternalLink, X, School } from 'lucide-react';
 import { Student } from '../../types/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGenerateContext } from '../../hooks/useGenerateContext';
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
+import EditStudentModal from './EditStudentModal';
 
 interface StudentHeaderProps {
   student: Student;
@@ -18,13 +19,15 @@ export default function StudentHeader({ student }: StudentHeaderProps) {
   const { generateContext, isGenerating } = useGenerateContext();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isContextModalOpen, setIsContextModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [currentStudent, setCurrentStudent] = useState<Student>(student);
   const navigate = useNavigate();
   
   const handleGenerateContext = async () => {
     try {
-      await generateContext(student.id);
+      await generateContext(currentStudent.id);
     } catch (error) {
       console.error('Error generating context:', error);
     }
@@ -32,6 +35,10 @@ export default function StudentHeader({ student }: StudentHeaderProps) {
 
   const handleDeleteClick = () => {
     setIsDeleteModalOpen(true);
+  };
+
+  const handleEditClick = () => {
+    setIsEditModalOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
@@ -43,7 +50,7 @@ export default function StudentHeader({ student }: StudentHeaderProps) {
       const { error } = await supabase
         .from('students')
         .delete()
-        .eq('id', student.id);
+        .eq('id', currentStudent.id);
 
       if (error) throw error;
 
@@ -67,6 +74,10 @@ export default function StudentHeader({ student }: StudentHeaderProps) {
     if (e.key === 'Escape') {
       setIsContextModalOpen(false);
     }
+  };
+
+  const handleStudentUpdate = (updatedStudent: Student) => {
+    setCurrentStudent(updatedStudent);
   };
 
   // Context Modal Component
@@ -107,9 +118,9 @@ export default function StudentHeader({ student }: StudentHeaderProps) {
                   <div className="h-4 bg-gray-200 rounded w-4/5"></div>
                   <div className="h-4 bg-gray-200 rounded w-3/4"></div>
                 </div>
-              ) : student.student_context ? (
+              ) : currentStudent.student_context ? (
                 <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-line">
-                  {student.student_context}
+                  {currentStudent.student_context}
                 </div>
               ) : (
                 <p className="text-gray-500 italic">No context available. Generate a context to see a summary of this student's progress.</p>
@@ -150,7 +161,7 @@ export default function StudentHeader({ student }: StudentHeaderProps) {
               <div>
                 <h3 className="text-lg font-medium text-gray-900">Delete Student</h3>
                 <p className="text-gray-600 mt-2">
-                  Are you sure you want to delete <span className="font-medium">{student.name}</span>? This action will permanently remove all student data including notes, subtasks, and progress. This action cannot be undone.
+                  Are you sure you want to delete <span className="font-medium">{currentStudent.name}</span>? This action will permanently remove all student data including notes, subtasks, and progress. This action cannot be undone.
                 </p>
               </div>
             </div>
@@ -202,19 +213,25 @@ export default function StudentHeader({ student }: StudentHeaderProps) {
     >
       <div className="flex flex-col md:flex-row md:justify-between md:items-start max-w-screen-2xl mx-auto">
         <div>
-          <h1 className="text-xl md:text-2xl font-light text-gray-800">{student.name}</h1>
+          <h1 className="text-xl md:text-2xl font-light text-gray-800">{currentStudent.name}</h1>
           <div className="flex flex-wrap items-center mt-2 gap-3 md:gap-4 text-sm text-gray-500">
             <div className="flex items-center">
               <GraduationCap className="h-4 w-4 mr-1.5 text-gray-400" />
-              <span>{student.grade}</span>
+              <span>{currentStudent.grade}</span>
             </div>
             <div className="flex items-center">
               <Book className="h-4 w-4 mr-1.5 text-gray-400" />
-              <span>{student.curriculum}</span>
+              <span>{currentStudent.curriculum}</span>
             </div>
+            {currentStudent.school_name && (
+              <div className="flex items-center">
+                <School className="h-4 w-4 mr-1.5 text-gray-400" />
+                <span>{currentStudent.school_name}</span>
+              </div>
+            )}
             <div className="flex items-center">
               <Calendar className="h-4 w-4 mr-1.5 text-gray-400" />
-              <span>Class of {student.target_year}</span>
+              <span>Class of {currentStudent.target_year}</span>
             </div>
           </div>
         </div>
@@ -234,6 +251,7 @@ export default function StudentHeader({ student }: StudentHeaderProps) {
           <motion.button 
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            onClick={handleEditClick}
             className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
             aria-label="Edit student"
             title="Edit student"
@@ -278,7 +296,7 @@ export default function StudentHeader({ student }: StudentHeaderProps) {
           </div>
         ) : (
           <p className="text-sm text-gray-600 leading-relaxed line-clamp-3">
-            {student.student_context || 'No context available. Click "Generate" to create a summary.'}
+            {currentStudent.student_context || 'No context available. Click "Generate" to create a summary.'}
           </p>
         )}
       </div>
@@ -288,6 +306,16 @@ export default function StudentHeader({ student }: StudentHeaderProps) {
 
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal />
+
+      {/* Edit Student Modal */}
+      {isEditModalOpen && (
+        <EditStudentModal 
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          student={currentStudent}
+          onUpdateSuccess={handleStudentUpdate}
+        />
+      )}
     </motion.div>
   );
 }

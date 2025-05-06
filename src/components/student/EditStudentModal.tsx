@@ -1,30 +1,78 @@
 /**
- * Form component for creating new student profiles
+ * Edit Student Modal component
+ * Provides an interface for editing existing student information
  */
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Save, Loader, AlertTriangle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { Student } from '../../types/types';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
-import { motion } from 'framer-motion';
 
-export default function CreateStudent() {
+interface EditStudentModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  student: Student;
+  onUpdateSuccess: (updatedStudent: Student) => void;
+}
+
+export default function EditStudentModal({
+  isOpen,
+  onClose,
+  student,
+  onUpdateSuccess
+}: EditStudentModalProps) {
   const { counsellor } = useAuth();
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showOtherCurriculum, setShowOtherCurriculum] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
   
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
     school_name: '',
-    target_year: new Date().getFullYear() + 4, // Default to 4 years from now
+    target_year: 0,
     grade: '',
     curriculum: '',
     other_curriculum: ''
   });
+
+  // Initialize form data when student prop changes
+  useEffect(() => {
+    if (student) {
+      setFormData({
+        name: student.name || '',
+        email: student.email || '',
+        phone: student.phone || '',
+        school_name: student.school_name || '',
+        target_year: student.target_year || new Date().getFullYear() + 4,
+        grade: student.grade || '',
+        curriculum: student.curriculum || '',
+        other_curriculum: student.curriculum === 'Others' ? student.other_curriculum || '' : ''
+      });
+      
+      setShowOtherCurriculum(student.curriculum === 'Others');
+    }
+  }, [student]);
+
+  // Handle click outside to close modal
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(e.target as Node) && !loading) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose, loading]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -44,7 +92,7 @@ export default function CreateStudent() {
     setError(null);
 
     if (!counsellor?.id) {
-      setError('You must be logged in to create a student');
+      setError('You must be logged in to update a student');
       setLoading(false);
       return;
     }
@@ -59,10 +107,10 @@ export default function CreateStudent() {
         throw new Error('Please specify the curriculum when selecting "Others"');
       }
       
-      // Create student record - only include needed fields and handle other_curriculum explicitly
+      // Update student record
       const { data, error } = await supabase
         .from('students')
-        .insert({
+        .update({
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
@@ -70,50 +118,51 @@ export default function CreateStudent() {
           target_year: formData.target_year,
           grade: formData.grade,
           curriculum: finalCurriculum,
-          other_curriculum: formData.other_curriculum,  // Explicitly include this field
-          counsellor_id: counsellor.id
+          other_curriculum: formData.other_curriculum
         })
+        .eq('id', student.id)
         .select()
         .single();
 
       if (error) throw error;
       
-      // Navigate to the new student's page
-      navigate(`/student/${data.id}`);
+      // Call the success handler with updated data
+      onUpdateSuccess(data as Student);
+      onClose();
     } catch (err) {
-      console.error('Error creating student:', err);
+      console.error('Error updating student:', err);
       setError(typeof err === 'object' && err !== null && 'message' in err 
         ? String(err.message) 
-        : 'Failed to create student. Please try again.');
+        : 'Failed to update student. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="container mx-auto px-4 sm:px-5 py-6 md:py-8 max-w-3xl"
-    >
-      <div className="mb-5 md:mb-6">
-        <motion.button
-          whileHover={{ x: -3 }}
-          onClick={() => navigate(-1)}
-          className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </motion.button>
-      </div>
+  if (!isOpen) return null;
 
-      <motion.div 
-        initial={{ y: 20 }}
-        animate={{ y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 md:p-8"
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <motion.div
+        ref={modalRef}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        transition={{ duration: 0.2 }}
+        className="bg-white rounded-xl shadow-lg p-5 md:p-6 w-full max-w-3xl max-h-[90vh] overflow-auto"
       >
-        <h1 className="text-xl md:text-2xl font-light mb-6 md:mb-8 text-gray-800">Create New Student</h1>
+        <div className="flex justify-between items-center mb-5">
+          <h3 className="text-lg font-medium text-gray-800">Edit Student</h3>
+          <motion.button 
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            disabled={loading}
+          >
+            <X className="h-5 w-5" />
+          </motion.button>
+        </div>
 
         {error && (
           <div className="mb-6 p-4 bg-red-50 text-red-700 border border-red-100 rounded-lg">
@@ -261,8 +310,9 @@ export default function CreateStudent() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               type="button"
-              onClick={() => navigate(-1)}
-              className="px-5 py-3 border border-gray-200 text-gray-700 rounded-lg sm:mr-4 hover:bg-gray-50 transition-colors"
+              onClick={onClose}
+              disabled={loading}
+              className="px-5 py-3 border border-gray-200 text-gray-700 rounded-lg sm:mr-4 hover:bg-gray-50 transition-colors disabled:opacity-50"
             >
               Cancel
             </motion.button>
@@ -271,18 +321,18 @@ export default function CreateStudent() {
               whileTap={{ scale: 0.98 }}
               type="submit"
               disabled={loading}
-              className="px-5 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-700 flex items-center justify-center transition-colors"
+              className="px-5 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-700 flex items-center justify-center transition-colors disabled:opacity-50"
             >
               {loading ? (
                 <span className="inline-block h-4 w-4 border-t-2 border-b-2 border-white rounded-full animate-spin mr-2"></span>
               ) : (
                 <Save className="h-4 w-4 mr-2" />
               )}
-              Create Student
+              Save Changes
             </motion.button>
           </div>
         </form>
       </motion.div>
-    </motion.div>
+    </div>
   );
 }

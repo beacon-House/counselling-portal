@@ -4,7 +4,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Subtask, Student } from '../../../types/types';
 import { supabase } from '../../../lib/supabase';
-import { Check, Clock, Play, AlertCircle, X, MessageSquare, ChevronDown, Calendar, User, Trash2 } from 'lucide-react';
+import { Check, Clock, Play, AlertCircle, X, MessageSquare, ChevronDown, Calendar, User, Trash2, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { useGenerateContext } from '../../../hooks/useGenerateContext';
@@ -12,6 +12,7 @@ import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { format, parseISO } from 'date-fns';
 import { useAuth } from '../../../context/AuthContext';
+import SubtaskOwnerSelect from '../SubtaskOwnerSelect';
 
 interface SubtaskListProps {
   subtasks: Subtask[];
@@ -424,14 +425,14 @@ export default function SubtaskList({ subtasks, studentId, taskId, onSubtaskUpda
     }
   };
 
-  // Function to handle owner changes
-  const handleOwnerChange = async (subtaskId: string, owner: string) => {
+  // Function to handle owner changes with multiple owners support
+  const handleOwnersChange = async (subtaskId: string, owners: string[]) => {
     setIsSaving(true);
     try {
       const { error } = await supabase
         .from('student_subtasks')
         .update({
-          owner: owner
+          owner: owners.length > 0 ? owners : null // Store as null if empty array
         })
         .eq('id', subtaskId)
         .eq('student_id', studentId);
@@ -439,7 +440,7 @@ export default function SubtaskList({ subtasks, studentId, taskId, onSubtaskUpda
       if (error) throw error;
       onSubtaskUpdate();
     } catch (error) {
-      console.error('Error updating subtask owner:', error);
+      console.error('Error updating subtask owners:', error);
     } finally {
       setIsSaving(false);
     }
@@ -620,20 +621,11 @@ export default function SubtaskList({ subtasks, studentId, taskId, onSubtaskUpda
                   </div>
                   
                   <div className="flex items-center flex-1" onClick={(e) => e.stopPropagation()}>
-                    <User className="h-3.5 w-3.5 text-gray-400 mr-1.5 flex-shrink-0" />
-                    <select
-                      value={subtask.owner || ''}
-                      onChange={(e) => handleOwnerChange(subtask.id, e.target.value)}
-                      className="text-xs rounded border border-gray-200 py-1 px-2 focus:outline-none focus:ring-1 focus:ring-gray-300 max-w-[150px] w-full"
-                    >
-                      <option value="">Select owner</option>
-                      {student && (
-                        <option value={student.name}>{student.name}</option>
-                      )}
-                      {counsellor && (
-                        <option value={counsellor.name}>{counsellor.name}</option>
-                      )}
-                    </select>
+                    <SubtaskOwnerSelect
+                      currentOwners={subtask.owner}
+                      student={student}
+                      onOwnersChange={(owners) => handleOwnersChange(subtask.id, owners)}
+                    />
                   </div>
                 </div>
               </div>

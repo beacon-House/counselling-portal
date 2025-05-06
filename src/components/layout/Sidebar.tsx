@@ -5,7 +5,7 @@
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Users, Plus, Search, Info } from 'lucide-react';
+import { Users, Plus, Search, Info, School } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import type { Student } from '../../types/types';
 import { useAuth } from '../../context/AuthContext';
@@ -77,6 +77,7 @@ export default function Sidebar() {
   const filteredStudents = students.filter(student => 
     student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (student.school_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (student.counsellor_name && student.counsellor_name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
@@ -134,7 +135,7 @@ export default function Sidebar() {
         <div className="relative">
           <input
             type="text"
-            placeholder="Search students or counsellors..."
+            placeholder="Search students, schools, or counsellors..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-9 pr-3 py-2 w-full text-sm bg-gray-50 border border-gray-200 rounded-full focus:outline-none focus:ring-1 focus:ring-gray-300"
@@ -190,7 +191,15 @@ export default function Sidebar() {
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-gray-400 mt-0.5 truncate">{student.grade} • {student.curriculum}</p>
+                    <div className="flex items-center mt-0.5">
+                      <p className="text-xs text-gray-400 truncate">{student.grade} • {student.curriculum}</p>
+                      {student.school_name && (
+                        <div className="flex items-center ml-2 text-xs text-gray-400">
+                          <School className="h-3 w-3 mr-1" />
+                          <span className="truncate max-w-[70px]">{student.school_name}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </NavLink>
               </motion.li>

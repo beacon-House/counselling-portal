@@ -9,8 +9,9 @@ import { Student, Phase, Task, Note } from '../../types/types';
 import RoadmapView from './roadmap/RoadmapView';
 import NotesPanel from './notes/NotesPanel';
 import FilesPanel from './files/FilesPanel';
+import TasksWithDeadlines from './TasksWithDeadlines';
 import StudentHeader from './StudentHeader';
-import { Layers, FileText, FolderOpen } from 'lucide-react';
+import { Layers, FileText, FolderOpen, Calendar } from 'lucide-react';
 import FloatingActionButton from './FloatingActionButton';
 import { motion } from 'framer-motion';
 import { useGenerateContext } from '../../hooks/useGenerateContext';
@@ -31,7 +32,7 @@ export default function StudentView() {
   const [error, setError] = useState<string | null>(null);
   const [activePhaseId, setActivePhaseId] = useState<string | null>(null);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'roadmap' | 'notes' | 'files'>('roadmap');
+  const [activeTab, setActiveTab] = useState<'roadmap' | 'notes' | 'files' | 'deadlines'>('roadmap');
   
   // Detail view state for notes
   const [isDetailView, setIsDetailView] = useState(false);
@@ -51,51 +52,53 @@ export default function StudentView() {
 
   useEffect(() => {
     if (!studentId) return;
-
-    const fetchStudentData = async () => {
-      try {
-        // Fetch student data
-        const { data: studentData, error: studentError } = await supabase
-          .from('students')
-          .select('*')
-          .eq('id', studentId)
-          .single();
-
-        if (studentError) throw studentError;
-        setStudent(studentData as Student);
-
-        // Fetch phases
-        const { data: phasesData, error: phasesError } = await supabase
-          .from('phases')
-          .select('*')
-          .order('sequence');
-
-        if (phasesError) throw phasesError;
-        setPhases(phasesData as Phase[]);
-        
-        // Set active phase to first phase
-        if (phasesData.length > 0) {
-          setActivePhaseId(phasesData[0].id);
-        }
-
-        // Fetch tasks
-        const { data: tasksData, error: tasksError } = await supabase
-          .from('tasks')
-          .select('*')
-          .order('sequence');
-
-        if (tasksError) throw tasksError;
-        setTasks(tasksData as Task[]);
-      } catch (err) {
-        console.error('Error fetching student data:', err);
-        setError('Failed to load student data. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchStudentData();
   }, [studentId]);
+
+  const fetchStudentData = async () => {
+    if (!studentId) return;
+    
+    try {
+      setLoading(true);
+      // Fetch student data
+      const { data: studentData, error: studentError } = await supabase
+        .from('students')
+        .select('*')
+        .eq('id', studentId)
+        .single();
+
+      if (studentError) throw studentError;
+      setStudent(studentData as Student);
+
+      // Fetch phases
+      const { data: phasesData, error: phasesError } = await supabase
+        .from('phases')
+        .select('*')
+        .order('sequence');
+
+      if (phasesError) throw phasesError;
+      setPhases(phasesData as Phase[]);
+      
+      // Set active phase to first phase
+      if (phasesData.length > 0 && !activePhaseId) {
+        setActivePhaseId(phasesData[0].id);
+      }
+
+      // Fetch tasks
+      const { data: tasksData, error: tasksError } = await supabase
+        .from('tasks')
+        .select('*')
+        .order('sequence');
+
+      if (tasksError) throw tasksError;
+      setTasks(tasksData as Task[]);
+    } catch (err) {
+      console.error('Error fetching student data:', err);
+      setError('Failed to load student data. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Organize tasks by phase
   const phasesWithTasks = React.useMemo(() => {
@@ -274,6 +277,17 @@ export default function StudentView() {
                   <FolderOpen className="h-4 w-4 mr-2" />
                   Files
                 </button>
+                <button
+                  onClick={() => setActiveTab('deadlines')}
+                  className={`flex items-center py-3 px-3 md:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                    activeTab === 'deadlines'
+                      ? 'border-gray-800 text-gray-800'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Deadlines
+                </button>
               </div>
             </div>
           </div>
@@ -313,7 +327,7 @@ export default function StudentView() {
                   setSelectedNote={setSelectedNote}
                 />
               </motion.div>
-            ) : (
+            ) : activeTab === 'files' ? (
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -325,6 +339,17 @@ export default function StudentView() {
                   phaseId={activePhaseId} 
                   taskId={activeTaskId}
                   student={student}
+                />
+              </motion.div>
+            ) : (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+                className="w-full overflow-auto"
+              >
+                <TasksWithDeadlines 
+                  studentId={studentId || ''}
                 />
               </motion.div>
             )}

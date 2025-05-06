@@ -1,6 +1,7 @@
 /**
  * Transcript Task Review component
  * Displays extracted tasks from a transcript and allows the counselor to review, edit, and create subtasks
+ * Includes local storage backup to prevent data loss on page crashes
  */
 import React, { useState, useEffect } from 'react';
 import { 
@@ -54,11 +55,34 @@ export default function TranscriptTaskReview({
   const [creatingSubtasks, setCreatingSubtasks] = useState(false);
   const [createSuccess, setCreateSuccess] = useState(false);
   const { counsellor } = useAuth();
+  
+  // Local storage key for this session
+  const localStorageKey = `transcript_tasks_${studentId}_${noteId}`;
 
-  // Component did mount - fetch roadmap and process transcript
+  // Component did mount - fetch roadmap and process transcript or load from localStorage
   useEffect(() => {
     const initializeComponent = async () => {
       console.log("TranscriptTaskReview - Initializing with:", { noteId, studentId, textLength: transcriptText?.length });
+      
+      // Try to load saved data from localStorage first
+      const savedData = localStorage.getItem(localStorageKey);
+      if (savedData) {
+        try {
+          const parsedData = JSON.parse(savedData);
+          console.log("Loaded saved tasks from localStorage:", parsedData.length);
+          setExtractedTasks(parsedData);
+          
+          // Still need to load phases and tasks even if we have saved data
+          await fetchRoadmapData();
+          await fetchStudentData();
+          setLoading(false);
+          return;
+        } catch (err) {
+          console.error("Error parsing saved tasks from localStorage:", err);
+          // Continue with normal loading if local storage parsing fails
+        }
+      }
+      
       await fetchRoadmapData();
       await fetchStudentData();
     };
@@ -70,14 +94,33 @@ export default function TranscriptTaskReview({
       setProcessingError("Missing required data to process transcript");
       setLoading(false);
     }
-  }, [noteId, transcriptText, studentId]);
+  }, [noteId, transcriptText, studentId, localStorageKey]);
 
-  // Once we have roadmap data, process the transcript
+  // Once we have roadmap data, process the transcript if we didn't load from localStorage
   useEffect(() => {
-    if (phases.length > 0 && tasks.length > 0 && transcriptText) {
+    if (phases.length > 0 && tasks.length > 0 && transcriptText && extractedTasks.length === 0) {
       processTranscript();
     }
-  }, [phases, tasks]);
+  }, [phases, tasks, transcriptText, extractedTasks.length]);
+
+  // Save tasks to localStorage whenever they change
+  useEffect(() => {
+    if (extractedTasks.length > 0) {
+      localStorage.setItem(localStorageKey, JSON.stringify(extractedTasks));
+      console.log("Saved tasks to localStorage:", extractedTasks.length);
+    }
+  }, [extractedTasks, localStorageKey]);
+
+  // Clean up localStorage when closing or completing
+  useEffect(() => {
+    return () => {
+      // Only clear when component unmounts, not on every render
+      if (createSuccess) {
+        localStorage.removeItem(localStorageKey);
+        console.log("Cleared localStorage after successful creation");
+      }
+    };
+  }, [createSuccess, localStorageKey]);
 
   const fetchStudentData = async () => {
     try {
@@ -92,9 +135,9 @@ export default function TranscriptTaskReview({
       if (error) throw error;
       setStudent(data as Student);
       console.log('Student data fetched successfully', data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching student data:', error);
-      setProcessingError('Failed to load student data: ' + (error as Error).message);
+      setProcessingError(`Failed to load student data: ${error.message || 'Unknown error'}`);
     }
   };
 
@@ -120,9 +163,9 @@ export default function TranscriptTaskReview({
       setTasks(tasksData as Task[]);
       
       console.log('Roadmap data fetched successfully', { phases: phasesData.length, tasks: tasksData.length });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching roadmap data:', error);
-      setProcessingError('Failed to load roadmap data: ' + (error as Error).message);
+      setProcessingError(`Failed to load roadmap data: ${error.message || 'Unknown error'}`);
       setLoading(false);
     }
   };
@@ -209,9 +252,17 @@ export default function TranscriptTaskReview({
       if (validatedTasks.length === 0) {
         handleAddTask();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error processing transcript:', error);
-      setProcessingError((error as Error).message || 'Failed to process transcript');
+      
+      // Enhanced error handling with detailed information
+      const errorMessage = error.message || 'Failed to process transcript';
+      const errorDetails = error.stack || JSON.stringify(error);
+      console.error('Error details:', errorDetails);
+      
+      // Set a user-friendly error message with a hint to check console for details
+      setProcessingError(`${errorMessage}. See console for more details.`);
+      
       // Add a default task even if there's an error
       handleAddTask();
     } finally {
@@ -273,6 +324,8 @@ export default function TranscriptTaskReview({
       // Return early if no tasks to create
       if (tasksToCreate.length === 0) {
         setCreateSuccess(true);
+        // Clear localStorage upon successful creation
+        localStorage.removeItem(localStorageKey);
         return;
       }
       
@@ -320,15 +373,31 @@ export default function TranscriptTaskReview({
       
       console.log('Created subtasks successfully:', createdSubtasks.length);
       setCreateSuccess(true);
+      
+      // Clear localStorage upon successful creation
+      localStorage.removeItem(localStorageKey);
+      
       setTimeout(() => {
         onTasksCreated();
       }, 1500);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating subtasks:', error);
-      setProcessingError((error as Error).message || 'Failed to create subtasks');
+      const errorMessage = error.message || 'Failed to create subtasks';
+      const errorDetails = error.stack || JSON.stringify(error);
+      console.error('Error details:', errorDetails);
+      
+      // Set user-friendly error message
+      setProcessingError(`${errorMessage}. Please try again or check the console for more details.`);
     } finally {
       setCreatingSubtasks(false);
     }
+  };
+  
+  // Handle cancellation - clear localStorage
+  const handleCancel = () => {
+    localStorage.removeItem(localStorageKey);
+    console.log("Cleared localStorage on cancel");
+    onClose();
   };
 
   // Task Editor component
@@ -651,7 +720,7 @@ export default function TranscriptTaskReview({
             Review Extracted Subtasks
           </h2>
           <button 
-            onClick={onClose}
+            onClick={handleCancel}
             className="text-gray-500 hover:text-gray-700"
             aria-label="Close"
           >
@@ -662,6 +731,7 @@ export default function TranscriptTaskReview({
         <div className="px-4 md:px-6 py-3 md:py-4 border-b border-gray-200 bg-gray-50">
           <p className="text-sm text-gray-600">
             Review the subtasks extracted from your transcript. You can edit, delete, or add new subtasks before creating them in the student's roadmap.
+            {extractedTasks.length > 0 && ` Your work is automatically saved in case of a browser crash.`}
           </p>
         </div>
         
@@ -749,7 +819,7 @@ export default function TranscriptTaskReview({
           </div>
           <div className="flex flex-col xs:flex-row space-y-3 xs:space-y-0 xs:space-x-3 w-full xs:w-auto">
             <button
-              onClick={onClose}
+              onClick={handleCancel}
               className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
               <X className="h-4 w-4 mr-2" />

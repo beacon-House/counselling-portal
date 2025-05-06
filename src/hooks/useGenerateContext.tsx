@@ -68,6 +68,7 @@ Student Profile:
 - Grade: ${student.grade}
 - Curriculum: ${student.curriculum}
 - Target Year: ${student.target_year}
+${student.school_name ? `- School: ${student.school_name}` : ''}
 
 `;
       
@@ -119,6 +120,7 @@ Student Profile:
       
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('Error response from generate-context function:', errorData);
         throw new Error(errorData.error || 'Failed to generate context');
       }
       
@@ -143,8 +145,12 @@ Student Profile:
       return generatedContext;
     } catch (err: any) {
       console.error('Error generating context:', err);
-      setError(err.message || 'Failed to generate context');
-      throw err;
+      const errorMessage = err.message || 'Failed to generate context';
+      const errorDetails = err.stack || JSON.stringify(err);
+      console.error('Error details:', errorDetails);
+      
+      setError(`${errorMessage}. Please try again or contact support if the issue persists.`);
+      throw new Error(`Context generation failed: ${errorMessage}`);
     } finally {
       // Remove this student from the in-progress set
       inProgressGenerations.delete(studentId);
