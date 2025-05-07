@@ -162,6 +162,7 @@ export interface Database {
           eta: string | null
           owner: string[] | null  // Changed from string to string[]
           sequence: number | null // Added for drag and drop reordering
+          is_ai_generated: boolean | null // Added to track AI-generated subtasks
         }
         Insert: {
           id?: string
@@ -174,6 +175,7 @@ export interface Database {
           eta?: string | null
           owner?: string[] | null  // Changed from string to string[]
           sequence?: number | null // Added for drag and drop reordering
+          is_ai_generated?: boolean | null // Added to track AI-generated subtasks
         }
         Update: {
           id?: string
@@ -186,6 +188,7 @@ export interface Database {
           eta?: string | null
           owner?: string[] | null  // Changed from string to string[]
           sequence?: number | null // Added for drag and drop reordering
+          is_ai_generated?: boolean | null // Added to track AI-generated subtasks
         }
         Relationships: [
           {

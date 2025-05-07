@@ -2,8 +2,8 @@
  * Task item component
  * Displays a task with expand/collapse functionality and subtask management
  */
-import React, { useState, useRef } from 'react';
-import { ChevronRight, Plus, Loader, HelpCircle, ClipboardList } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { ChevronRight, Plus, Loader, HelpCircle, ClipboardList, Sparkles } from 'lucide-react';
 import { Task, Subtask } from '../../../types/types';
 import SubtaskList from './SubtaskList';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -36,8 +36,39 @@ export default function TaskItem({
   const [isHovered, setIsHovered] = useState(false);
   const [isCreatingSubtask, setIsCreatingSubtask] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [hasNewAISubtasks, setHasNewAISubtasks] = useState(false);
   const tooltipTimeout = useRef<NodeJS.Timeout | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  
+  // Memoize the function to check for AI-generated subtasks
+  const checkForNewAISubtasks = useCallback(() => {
+    const localStorageKey = `viewed_tasks_${studentId}`;
+    const viewedTasksData = localStorage.getItem(localStorageKey);
+    let viewedTasks: Record<string, boolean> = {};
+    
+    if (viewedTasksData) {
+      try {
+        viewedTasks = JSON.parse(viewedTasksData);
+      } catch (e) {
+        console.error("Error parsing viewed tasks:", e);
+      }
+    }
+    
+    // Check if this task has any AI-generated subtasks that haven't been viewed
+    const hasAIGeneratedSubtasks = subtasks.some(subtask => 
+      subtask.is_ai_generated === true && !viewedTasks[task.id]
+    );
+    
+    // Only update state if there's a change, to avoid unnecessary re-renders
+    if (hasAIGeneratedSubtasks !== hasNewAISubtasks) {
+      setHasNewAISubtasks(hasAIGeneratedSubtasks);
+    }
+  }, [subtasks, task.id, studentId, hasNewAISubtasks]);
+  
+  // Check for AI-generated subtasks when subtasks or task changes
+  useEffect(() => {
+    checkForNewAISubtasks();
+  }, [checkForNewAISubtasks]);
   
   // Function to create a new subtask inline
   const createNewSubtask = async () => {
@@ -55,7 +86,8 @@ export default function TaskItem({
           student_id: studentId,
           task_id: task.id,
           status: 'yet_to_start',
-          sequence: maxSequence + 1 // Add to the end
+          sequence: maxSequence + 1, // Add to the end
+          is_ai_generated: false // Mark as manually created
         })
         .select()
         .single();
@@ -106,6 +138,35 @@ export default function TaskItem({
     
     return {};
   };
+  
+  // Handler for when the task is expanded/viewed
+  const handleTaskToggle = () => {
+    onToggleTask();
+    
+    // If this task has AI-generated subtasks, mark it as viewed
+    if (hasNewAISubtasks) {
+      const localStorageKey = `viewed_tasks_${studentId}`;
+      const viewedTasksData = localStorage.getItem(localStorageKey);
+      let viewedTasks: Record<string, boolean> = {};
+      
+      if (viewedTasksData) {
+        try {
+          viewedTasks = JSON.parse(viewedTasksData);
+        } catch (e) {
+          console.error("Error parsing viewed tasks:", e);
+        }
+      }
+      
+      // Update the viewed status for this task
+      viewedTasks[task.id] = true;
+      
+      // Save to localStorage
+      localStorage.setItem(localStorageKey, JSON.stringify(viewedTasks));
+      
+      // Update state
+      setHasNewAISubtasks(false);
+    }
+  };
 
   return (
     <div key={task.id} className="mt-2">
@@ -113,7 +174,7 @@ export default function TaskItem({
         className={`flex justify-between items-center p-2.5 md:p-3 cursor-pointer rounded-lg transition-colors duration-200 ${
           isActive ? 'bg-gray-100' : 'hover:bg-gray-50'
         }`}
-        onClick={onToggleTask}
+        onClick={handleTaskToggle}
         whileHover={{ backgroundColor: "rgb(243 244 246)" }}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
@@ -127,8 +188,19 @@ export default function TaskItem({
           >
             <ChevronRight className="h-4 w-4 text-gray-400 mr-2" />
           </motion.div>
-          <div className="relative">
+          <div className="relative flex items-center">
             <span className="text-gray-700 truncate">{task.sequence}. {task.name}</span>
+            
+            {/* New Indicator for AI-generated subtasks */}
+            {hasNewAISubtasks && (
+              <span className="ml-2 relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 -translate-y-1 text-xs text-indigo-600 whitespace-nowrap hidden sm:block">
+                  New AI tasks
+                </span>
+              </span>
+            )}
             
             {/* Hover suggestion button (only when tooltip is not shown) */}
             {task.subtask_suggestion && !showTooltip && (

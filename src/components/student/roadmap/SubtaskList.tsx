@@ -6,7 +6,7 @@ import { Subtask, Student } from '../../../types/types';
 import { supabase } from '../../../lib/supabase';
 import { 
   Check, Clock, Play, AlertCircle, X, MessageSquare, ChevronDown, Calendar, 
-  User, Trash2, Users, GripVertical, Loader 
+  User, Trash2, Users, GripVertical, Loader, Sparkles 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
@@ -634,6 +634,13 @@ export default function SubtaskList({ subtasks, studentId, taskId, onSubtaskUpda
                                 >
                                   {subtask.name}
                                 </span>
+                                {/* Display AI badge if the subtask was AI-generated */}
+                                {subtask.is_ai_generated && (
+                                  <span className="ml-1.5 text-xs flex items-center text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                    <Sparkles className="h-3 w-3 mr-0.5" />
+                                    <span className="hidden xs:inline">AI</span>
+                                  </span>
+                                )}
                                 {subtask.remark && (
                                   <button 
                                     onClick={(e) => {

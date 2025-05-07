@@ -35,6 +35,7 @@ export default function RoadmapView({
   const [subtasks, setSubtasks] = useState<Record<string, Subtask[]>>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [viewedTasksIds, setViewedTasksIds] = useState<string[]>([]);
 
   useEffect(() => {
     // Initialize expanded phases (first one open by default)
@@ -46,6 +47,18 @@ export default function RoadmapView({
 
     // Load subtasks for all tasks
     fetchAllSubtasks();
+    
+    // Load viewed task IDs from localStorage
+    const storageKey = `viewed_tasks_${studentId}`;
+    const viewedTasksData = localStorage.getItem(storageKey);
+    if (viewedTasksData) {
+      try {
+        const parsed = JSON.parse(viewedTasksData);
+        setViewedTasksIds(Object.keys(parsed).filter(id => parsed[id]));
+      } catch (e) {
+        console.error("Error parsing viewed tasks:", e);
+      }
+    }
   }, [phases, studentId]);
 
   const fetchAllSubtasks = async () => {
@@ -84,14 +97,36 @@ export default function RoadmapView({
   };
 
   const toggleTask = (taskId: string, phaseId: string) => {
-    setExpandedTasks(prev => ({
-      ...prev,
-      [taskId]: !prev[taskId]
-    }));
+    const newExpandedTasks = {
+      ...expandedTasks,
+      [taskId]: !expandedTasks[taskId]
+    };
+    setExpandedTasks(newExpandedTasks);
     
     // Set active task
     setActivePhaseId(phaseId);
     setActiveTaskId(taskId);
+    
+    // If we're expanding a task, mark it as viewed in localStorage
+    if (!expandedTasks[taskId]) {
+      const storageKey = `viewed_tasks_${studentId}`;
+      const viewedTasksData = localStorage.getItem(storageKey);
+      let viewedTasks: Record<string, boolean> = {};
+      
+      if (viewedTasksData) {
+        try {
+          viewedTasks = JSON.parse(viewedTasksData);
+        } catch (e) {
+          console.error("Error parsing viewed tasks:", e);
+        }
+      }
+      
+      viewedTasks[taskId] = true;
+      localStorage.setItem(storageKey, JSON.stringify(viewedTasks));
+      
+      // Update viewed tasks state
+      setViewedTasksIds(prev => [...prev, taskId]);
+    }
   };
 
   const openCreateSubtaskModal = (taskId: string) => {

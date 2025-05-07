@@ -27,6 +27,7 @@ export interface Task {
   phase_id: string;
   subtasks?: Subtask[];
   subtask_suggestion?: string; // Added field for task hover suggestions
+  has_new_ai_subtasks?: boolean; // Added to track new AI-generated subtasks
 }
 
 export interface Subtask {
@@ -40,6 +41,7 @@ export interface Subtask {
   eta?: string; // timestamp for expected completion date
   owner?: string[] | null; // Changed from string to string[] for multiple owners
   sequence?: number; // Added for drag and drop reordering
+  is_ai_generated?: boolean; // Added to track AI-generated subtasks
 }
 
 export interface Student {

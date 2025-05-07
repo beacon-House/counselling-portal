@@ -6,7 +6,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Calendar, X, Check, Trash2, Edit2, Plus, Save, AlertTriangle, 
-  ArrowDownCircle, ArrowUpCircle, CheckCircle, XCircle, Loader
+  ArrowDownCircle, ArrowUpCircle, CheckCircle, XCircle, Loader,
+  Sparkles
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -189,7 +190,7 @@ export default function TranscriptTaskReview({
           phases,
           tasks,
           studentId,
-          openaiApiKey: import.meta.env.VITE_OPENAI_API_KEY
+          openaiApiKey: import.meta.env.VITE_OPENAI_API_KEY // Pass the OpenAI API key to the edge function
         })
       });
       
@@ -353,7 +354,8 @@ export default function TranscriptTaskReview({
             status: 'yet_to_start',
             remark: task.notes || undefined,
             eta: task.dueDate ? new Date(task.dueDate).toISOString() : undefined,
-            owner: task.owner || undefined
+            owner: task.owner ? [task.owner] : undefined,
+            is_ai_generated: true // Mark as AI-generated
           })
           .select();
         
@@ -610,8 +612,14 @@ export default function TranscriptTaskReview({
     return (
       <div className={`bg-white border border-gray-200 rounded-lg p-4 ${task.isDeleted ? 'opacity-50' : ''}`}>
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-3">
-          <h3 className="text-base font-semibold text-gray-900 flex-1 line-clamp-2">
+          <h3 className="text-base font-semibold text-gray-900 flex-1 line-clamp-2 flex items-center">
             {task.description}
+            {task.isNew !== true && (
+              <span className="ml-2 text-xs flex items-center text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full">
+                <Sparkles className="h-3 w-3 mr-1" />
+                AI Generated
+              </span>
+            )}
           </h3>
           <div className="flex space-x-2">
             {task.isDeleted ? (
