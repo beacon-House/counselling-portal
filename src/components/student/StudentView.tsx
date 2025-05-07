@@ -13,7 +13,6 @@ import FilesPanel from './files/FilesPanel';
 import TasksWithDeadlines from './TasksWithDeadlines';
 import StudentHeader from './StudentHeader';
 import { Layers, FileText, FolderOpen, Calendar, MessageSquare } from 'lucide-react';
-import FloatingActionButton from './FloatingActionButton';
 import { motion } from 'framer-motion';
 import { useGenerateContext } from '../../hooks/useGenerateContext';
 
@@ -38,15 +37,6 @@ export default function StudentView() {
   // Detail view state for notes and transcripts
   const [isDetailView, setIsDetailView] = useState(false);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
-  
-  // FAB state
-  const [isFabOpen, setIsFabOpen] = useState(false);
-  const [selectedContext, setSelectedContext] = useState<SelectedContext>({
-    phaseId: null,
-    taskId: null,
-    subtaskId: null,
-    name: '',
-  });
   
   // Context generation hook
   const { generateContext } = useGenerateContext();
@@ -108,90 +98,6 @@ export default function StudentView() {
       tasks: tasks.filter(task => task.phase_id === phase.id)
     }));
   }, [phases, tasks]);
-
-  // Function to update selected context for FAB
-  const setContext = (phaseId: string | null, taskId: string | null, subtaskId: string | null = null) => {
-    let contextName = '';
-    
-    if (subtaskId) {
-      const phase = phases.find(p => p.id === phaseId);
-      const task = tasks.find(t => t.id === taskId);
-      if (phase && task) {
-        contextName = `${phase.name} > ${task.name} > Subtask`;
-      }
-    } else if (taskId) {
-      const phase = phases.find(p => p.id === phaseId);
-      const task = tasks.find(t => t.id === taskId);
-      if (phase && task) {
-        contextName = `${phase.name} > ${task.name}`;
-      }
-    } else if (phaseId) {
-      const phase = phases.find(p => p.id === phaseId);
-      if (phase) {
-        contextName = phase.name;
-      }
-    } else {
-      contextName = student?.name || 'Student';
-    }
-    
-    setSelectedContext({
-      phaseId,
-      taskId,
-      subtaskId,
-      name: contextName
-    });
-  };
-  
-  // Handle opening the FAB
-  const handleOpenFab = (phaseId: string | null, taskId: string | null, subtaskId: string | null = null) => {
-    setContext(phaseId, taskId, subtaskId);
-    setIsFabOpen(true);
-  };
-  
-  // Handle adding a note from the FAB
-  const handleAddNote = () => {
-    // First switch to the notes tab
-    setActiveTab('notes');
-    
-    // Then set up the note creation state
-    setActivePhaseId(selectedContext.phaseId);
-    setActiveTaskId(selectedContext.taskId);
-    
-    // Slight delay to ensure the tab switch completes before opening detail view
-    setTimeout(() => {
-      setIsDetailView(true);
-      setSelectedNote(null);
-    }, 10);
-    
-    setIsFabOpen(false);
-  };
-
-  // Get contextual text for FAB menu
-  const getContextText = () => {
-    if (!selectedContext.phaseId) {
-      return `Add note for ${student?.name || 'Student'}`;
-    }
-    
-    return `Add note to: ${selectedContext.name}`;
-  };
-
-  // Handle adding a transcript from the FAB
-  const handleAddTranscript = () => {
-    // Switch to transcript tab
-    setActiveTab('transcript');
-    
-    // Set up the transcript creation state
-    setActivePhaseId(selectedContext.phaseId);
-    setActiveTaskId(selectedContext.taskId);
-    
-    // Delay to ensure the tab switch completes
-    setTimeout(() => {
-      setIsDetailView(true);
-      setSelectedNote(null);
-    }, 10);
-    
-    setIsFabOpen(false);
-  };
   
   // Update student state when context is refreshed
   const refreshStudentData = async () => {
@@ -232,18 +138,6 @@ export default function StudentView() {
       subscription.unsubscribe();
     };
   }, [studentId]);
-
-  // Handle file upload
-  const handleUploadFile = () => {
-    // Switch to files tab
-    setActiveTab('files');
-    
-    // Set context
-    setActivePhaseId(selectedContext.phaseId);
-    setActiveTaskId(selectedContext.taskId);
-    
-    setIsFabOpen(false);
-  };
 
   return (
     <div className="h-full flex flex-col">
@@ -337,7 +231,7 @@ export default function StudentView() {
                   activeTaskId={activeTaskId}
                   setActivePhaseId={setActivePhaseId}
                   setActiveTaskId={setActiveTaskId}
-                  onOpenFab={handleOpenFab}
+                  onOpenFab={() => {}}
                 />
               </motion.div>
             ) : activeTab === 'transcript' ? (
@@ -401,18 +295,6 @@ export default function StudentView() {
               </motion.div>
             )}
           </div>
-          
-          {/* Floating Action Button */}
-          {activeTab === 'roadmap' && (
-            <FloatingActionButton 
-              isOpen={isFabOpen}
-              toggleOpen={() => setIsFabOpen(!isFabOpen)}
-              onAddNote={handleAddNote}
-              onAddTranscript={handleAddTranscript}
-              onUploadFile={handleUploadFile}
-              contextText={getContextText()}
-            />
-          )}
         </>
       ) : (
         <div className="flex-1 flex justify-center items-center p-4">

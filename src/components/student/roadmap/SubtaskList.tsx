@@ -197,12 +197,11 @@ const StatusDropdown = ({
   return createPortal(
     <div 
       ref={dropdownRef}
-      className="fixed bg-white rounded-lg shadow-lg py-1 border border-gray-200"
+      className="fixed bg-white rounded-lg shadow-lg py-1 border border-gray-200 z-[100]"
       style={{
         top: adjustedPosition.top + 'px',
         left: adjustedPosition.left + 'px',
         width: adjustedPosition.width + 'px',
-        zIndex: 9999,
       }}
     >
       <button
@@ -588,17 +587,19 @@ export default function SubtaskList({ subtasks, studentId, taskId, onSubtaskUpda
                     <motion.li 
                       ref={provided.innerRef}
                       {...provided.draggableProps}
-                      className={`flex flex-col bg-white rounded-lg shadow-sm border border-gray-100 overflow-visible ${
+                      className={`flex flex-col bg-white rounded-lg shadow-sm border border-gray-100 overflow-visible relative ${
                         snapshot.isDragging ? 'shadow-md' : ''
                       }`}
                       onMouseEnter={() => setHoveredSubtask(subtask.id)}
                       onMouseLeave={() => setHoveredSubtask(null)}
-                      onClick={() => handleSubtaskClick(subtask.id)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleSubtaskClick(subtask.id);
+                      }}
                     >
-                      <div className="p-3">
-                        <div className="flex flex-col space-y-3">
+                      <div className="p-3 grid grid-cols-12 gap-2 md:gap-4 items-center">
                           {/* Group 1: Subtask Name with Drag Handle */}
-                          <div className="flex items-start min-w-0">
+                          <div className="col-span-12 md:col-span-4 flex items-center min-w-0 gap-2">
                             <div 
                               {...provided.dragHandleProps}
                               className="mr-2 cursor-grab flex items-center flex-shrink-0 text-gray-300 hover:text-gray-500 transition-colors"
@@ -623,9 +624,9 @@ export default function SubtaskList({ subtasks, studentId, taskId, onSubtaskUpda
                                 onClick={(e) => e.stopPropagation()}
                               />
                             ) : (
-                              <div className="flex items-start flex-1 min-w-0 w-full break-words">
+                              <div className="flex items-center flex-1 min-w-0 w-full">
                                 <span 
-                                  className="text-sm font-medium text-gray-700 cursor-pointer hover:underline break-words w-full"
+                                  className="text-sm font-medium text-gray-700 cursor-pointer hover:underline w-full line-clamp-2"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setEditingSubtaskId(subtask.id);
@@ -649,12 +650,45 @@ export default function SubtaskList({ subtasks, studentId, taskId, onSubtaskUpda
                             )}
                           </div>
                           
-                          {/* Group 2: Status */}
-                          <div className="flex justify-between items-center">
+                          {/* Group 2: ETA Date */}
+                          <div className="col-span-6 md:col-span-2 flex items-center" onClick={(e) => e.stopPropagation()}>
+                            <div className="relative flex items-center">
+                              <Calendar className="h-3.5 w-3.5 text-gray-400 mr-1.5 flex-shrink-0" />
+                              <DatePicker 
+                                selected={subtask.eta ? parseISO(subtask.eta) : null}
+                                onChange={(date) => handleEtaChange(subtask.id, date)}
+                                dateFormat="MMM d, yyyy"
+                                className="text-xs rounded border border-gray-200 py-1.5 px-2 focus:outline-none focus:ring-1 focus:ring-gray-300 w-24 transition-shadow hover:shadow-sm bg-white"
+                                placeholderText="Set date"
+                                isClearable
+                                showPopperArrow={false}
+                                popperClassName="z-[100]"
+                                popperPlacement="bottom-start"
+                                clearButtonClassName="hidden"
+                                customInput={
+                                  <input
+                                    className="text-xs rounded border border-gray-200 py-1.5 px-2 focus:outline-none focus:ring-1 focus:ring-gray-300 w-24 transition-shadow hover:shadow-sm bg-white cursor-pointer"
+                                  />
+                                }
+                              />
+                            </div>
+                          </div>
+                          
+                          {/* Group 3: Owner */}
+                          <div className="col-span-6 md:col-span-3 flex items-center" onClick={(e) => e.stopPropagation()}>
+                            <SubtaskOwnerSelect
+                              currentOwners={subtask.owner}
+                              student={student}
+                              onOwnersChange={(owners) => handleOwnersChange(subtask.id, owners)}
+                            />
+                          </div>
+                          
+                          {/* Group 4: Status and Actions */}
+                          <div className="col-span-12 md:col-span-3 flex items-center justify-between md:justify-end gap-2 mt-3 md:mt-0">
                             <button
                               ref={el => statusButtonRefs.current[subtask.id] = el}
                               onClick={(e) => toggleDropdown(e, subtask.id)}
-                              className={`flex items-center justify-between px-3 py-1.5 rounded-lg text-sm border ${getStatusColor(subtask.status)} hover:shadow-sm transition-all min-w-[140px]`}
+                              className={`flex items-center justify-between px-3 py-1.5 rounded-lg text-sm border ${getStatusColor(subtask.status)} hover:shadow-sm transition-all w-full md:w-[160px] relative z-20 whitespace-nowrap`}
                             >
                               <span className="flex items-center">
                                 <span className="mr-1.5">{getStatusIcon(subtask.status)}</span>
@@ -669,38 +703,14 @@ export default function SubtaskList({ subtasks, studentId, taskId, onSubtaskUpda
                                 e.stopPropagation();
                                 handleDeleteSubtask(subtask.id);
                               }}
-                              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-gray-100 rounded-full transition-colors"
+                              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0"
                               title="Delete subtask"
                               aria-label="Delete subtask"
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
                           </div>
-                          
-                          {/* Group 3: ETA and Owner on separate row for mobile */}
-                          <div className="flex flex-wrap md:flex-nowrap items-center gap-2 text-xs">
-                            <div className="flex items-center min-w-[130px]" onClick={(e) => e.stopPropagation()}>
-                              <Calendar className="h-3.5 w-3.5 text-gray-400 mr-1.5 flex-shrink-0" />
-                              <DatePicker 
-                                selected={subtask.eta ? parseISO(subtask.eta) : null}
-                                onChange={(date) => handleEtaChange(subtask.id, date)}
-                                dateFormat="MMM d, yyyy"
-                                className="text-xs rounded border border-gray-200 py-1 px-2 focus:outline-none focus:ring-1 focus:ring-gray-300 w-24 md:w-28"
-                                placeholderText="Set date"
-                                isClearable
-                              />
-                            </div>
-                            
-                            <div className="flex items-center flex-1" onClick={(e) => e.stopPropagation()}>
-                              <SubtaskOwnerSelect
-                                currentOwners={subtask.owner}
-                                student={student}
-                                onOwnersChange={(owners) => handleOwnersChange(subtask.id, owners)}
-                              />
-                            </div>
-                          </div>
                         </div>
-                      </div>
                       
                       {/* Expanded details section with remark */}
                       <AnimatePresence>

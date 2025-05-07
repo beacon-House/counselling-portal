@@ -3,7 +3,7 @@
  * Displays a task with expand/collapse functionality and subtask management
  */
 import React, { useState, useRef } from 'react';
-import { ChevronRight, Plus, Loader, HelpCircle } from 'lucide-react';
+import { ChevronRight, Plus, Loader, HelpCircle, ClipboardList } from 'lucide-react';
 import { Task, Subtask } from '../../../types/types';
 import SubtaskList from './SubtaskList';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -168,6 +168,14 @@ export default function TaskItem({
               </div>
             )}
           </div>
+        </div>
+
+        {/* Subtask count indicator - always visible */}
+        <div className="flex items-center">
+          <span className="flex items-center text-xs font-medium px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
+            <ClipboardList className="h-3.5 w-3.5 mr-1.5" />
+            {subtasks.length} subtasks
+          </span>
         </div>
       </motion.div>
       
