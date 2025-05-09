@@ -41,7 +41,8 @@ CREATE TABLE students (
     other_curriculum TEXT,    -- For storing custom curriculum when "Others" is selected
     student_context TEXT,     -- AI-generated summary of student profile/progress
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    counsellor_id UUID REFERENCES counsellors(id) ON DELETE SET NULL
+    counsellor_id UUID REFERENCES counsellors(id) ON DELETE SET NULL,
+    school_name TEXT         -- Student's current school
 );
 ```
 
@@ -66,6 +67,7 @@ CREATE TABLE tasks (
     phase_id UUID REFERENCES phases(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     sequence INTEGER NOT NULL, -- Order within phase
+    subtask_suggestion TEXT,  -- Suggestion text for creating subtasks
     UNIQUE(phase_id, name)
 );
 ```
@@ -85,7 +87,9 @@ CREATE TABLE student_subtasks (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     remark TEXT, -- Status change remark (max 120 chars)
     eta TIMESTAMP WITH TIME ZONE, -- Expected completion date
-    owner TEXT -- Owner of the subtask (student or counsellor)
+    owner TEXT[], -- Array of owners (student and/or counsellor)
+    sequence INTEGER, -- For drag and drop reordering
+    is_ai_generated BOOLEAN DEFAULT false -- Flag for AI-generated subtasks
 );
 ```
 
@@ -439,6 +443,8 @@ CREATE INDEX idx_files_phase_task ON files(student_id, phase_id, task_id);
 
 **Environment Variables Used:**
 - OPENAI_API_KEY (passed via request)
+- SUPABASE_URL
+- SUPABASE_SERVICE_ROLE_KEY
 
 **Input:**
 - `transcriptText`: The meeting transcript text

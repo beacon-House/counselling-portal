@@ -87,6 +87,9 @@ This document provides a comprehensive overview of all files in the Beacon House
 | `src/components/student/StudentHeader.tsx` | StudentHeader | Header showing student information and context summary | Supabase, useGenerateContext, Lucide, Framer Motion |
 | `src/components/student/CreateStudent.tsx` | CreateStudent | Form to create new students with custom curriculum support | React Router, useAuth, Supabase, Lucide, Framer Motion |
 | `src/components/student/FloatingActionButton.tsx` | FloatingActionButton | Contextual floating action button for adding notes | Lucide, Framer Motion |
+| `src/components/student/DeleteConfirmationModal.tsx` | DeleteConfirmationModal | Modal for confirming student deletion | React, Supabase, Lucide, Framer Motion |
+| `src/components/student/EditStudentModal.tsx` | EditStudentModal | Modal for editing student information | React, Supabase, Lucide, Framer Motion |
+| `src/components/student/SubtaskOwnerSelect.tsx` | SubtaskOwnerSelect | Component for selecting subtask owners | React, Lucide, Framer Motion |
 
 #### Roadmap Components
 
@@ -106,6 +109,13 @@ This document provides a comprehensive overview of all files in the Beacon House
 | `src/components/student/notes/NoteDetails.tsx` | NoteDetails | Full-screen editor for creating and editing notes with transcript support | Supabase, TranscriptTaskReview, Lucide, Framer Motion |
 | `src/components/student/notes/TranscriptTaskReview.tsx` | TranscriptTaskReview | Interface for reviewing and creating subtasks from transcript notes | Supabase, DatePicker, Lucide, Framer Motion |
 | `src/components/student/notes/FileFixUtility.tsx` | FileFixUtility | Utility component to fix existing file records in the database | Supabase, Lucide |
+
+#### Files Components
+
+| File Path | Components | Purpose | Dependencies |
+|-----------|------------|---------|-------------|
+| `src/components/student/files/FilesPanel.tsx` | FilesPanel | Panel for managing and displaying student files | Supabase, FileUploadModal, Lucide, Framer Motion |
+| `src/components/student/files/FileUploadModal.tsx` | FileUploadModal | Modal for uploading and organizing files | Supabase, Lucide, Framer Motion |
 
 ### Supabase Edge Functions
 
@@ -133,6 +143,7 @@ This document provides a comprehensive overview of all files in the Beacon House
 | `supabase/migrations/20250430054133_quiet_recipe.sql` | Context generation | Enable student context updates |
 | `supabase/migrations/20250430130503_frosty_trail.sql` | Subtask tracking | Add ETA and owner fields to student_subtasks |
 | `supabase/migrations/20250430132051_blue_scene.sql` | Remark length | Update limit for subtask remarks |
+| `supabase/migrations/20250602123456_files_management.sql` | File management | Create files table and RLS policies |
 
 ### Documentation Files
 
@@ -142,66 +153,3 @@ This document provides a comprehensive overview of all files in the Beacon House
 | `docs/db-schema.md` | Database Schema Documentation | Complete SQL schema definition with edge functions, RLS, and migrations |
 | `docs/implementation-progress.md` | Implementation Status | Current progress of implementation vs PRD requirements |
 | `docs/file-names.md` | File Structure Documentation | This file - documentation of all project files and components |
-
-## Component Functionality Details
-
-### Authentication
-
-- **Login**: Email/password authentication form that connects to Supabase Auth
-- **AuthProvider**: Context provider that manages authentication state
-- **useAuth**: Custom hook for consuming authentication state and methods
-
-### Layout
-
-- **AppLayout**: Three-panel layout with sidebar, main content, and optional AI panel
-- **Header**: Contains user profile, search, and navigation controls
-- **Sidebar**: Lists students with search and filtering capability
-- **Footer**: Standard footer with copyright and links
-- **AIChatPanel**: AI chat interface for querying student data across the system
-
-### Student Management
-
-- **StudentView**: Main dashboard for a student with roadmap and notes
-- **StudentHeader**: Displays student information and context summary with generation capability
-- **CreateStudent**: Form for adding new students to the system
-- **FloatingActionButton**: Contextual button for adding notes to specific portions of the roadmap
-
-### Roadmap
-
-- **RoadmapView**: Hierarchical display of phases, tasks, and subtasks
-- **SubtaskList**: Manages the status and display of subtasks with remarks
-  - **RemarkModal**: Modal for adding remarks when changing subtask status
-- **CreateSubtaskModal**: Interface for adding new subtasks to a task
-- **TaskItem**: Individual task display with expandable subtask list
-
-### Notes
-
-- **NotesPanel**: Enhanced interface for creating and viewing notes with support for text, file, image, and transcript note types
-  - Text entry with canvas-style editing
-  - File upload with preview and description
-  - Image upload with preview and description
-  - Transcript upload with AI extraction of action items
-  - Error handling and loading indicators
-  - Filter by note type (All, Standard, Transcripts)
-- **NoteItem**: Display component for different note types with extended functionality
-  - Text note display with proper formatting
-  - Image display with lazy loading
-  - File display with download and view options
-  - Transcript display with specialized formatting
-  - File name extraction and formatting
-- **NoteDetails**: Full-screen editor for creating and editing notes
-  - Rich text editing for text notes
-  - Type selection between standard notes and transcripts
-  - Metadata editing (title, description)
-  - File replacement functionality
-- **TranscriptTaskReview**: Component for reviewing and managing extracted subtasks from transcripts
-  - Displays AI-extracted subtasks
-  - Allows editing, deleting, and adding new subtasks
-  - Creates subtasks in student roadmap from transcript content
-
-### AI Features
-
-- **useGenerateContext**: Custom hook for generating student context summaries
-- **generate-context**: Edge function for creating AI-powered summaries of student progress
-- **process-transcript**: Edge function for extracting actionable items from meeting transcripts
-- **ai-chat**: Edge function for natural language interaction with the system

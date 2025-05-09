@@ -68,6 +68,27 @@ export default function Sidebar() {
     };
 
     fetchStudents();
+
+    // Set up real-time subscription for student changes
+    const studentsSubscription = supabase
+      .channel('students-changes')
+      .on('postgres_changes', 
+        { 
+          event: '*', // Listen for inserts, updates, and deletes
+          schema: 'public', 
+          table: 'students' 
+        }, 
+        () => {
+          console.log('Students table changed, refreshing data...');
+          fetchStudents();
+        }
+      )
+      .subscribe();
+
+    // Clean up subscription when component unmounts
+    return () => {
+      studentsSubscription.unsubscribe();
+    };
   }, [counsellor]);
 
   const handleCreateStudent = () => {
