@@ -93,10 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from('counsellors')
         .select('*')
         .eq('id', userId)
-        .single()
-        .headers({
-          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-        });
+        .single();
 
       if (error) {
         throw error;
