@@ -5,6 +5,26 @@
 html, body, #root {
   height: 100%;
   -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Poppins', sans-serif;
+  background: linear-gradient(to bottom, #ffffff, #fafafa);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Premium glossy styling for containers */
+.bg-white {
+  background: linear-gradient(145deg, #ffffff, #fefefe);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+/* Add base transition for all interactive elements */
+a, button, input, select, textarea, 
+[role="button"], .transition-all {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 /* Hide scrollbar in webkit browsers while maintaining functionality */
@@ -67,10 +87,90 @@ button.rounded-full {
   outline-offset: 2px;
 }
 
-/* Better font rendering */
-body {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* Enhanced hover effects */
+button:hover, a:hover, [role="button"]:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
+}
+
+button:active, a:active, [role="button"]:active {
+  transform: translateY(0px);
+}
+
+/* Glossy card effect */
+.rounded-lg, .rounded-xl {
+  backdrop-filter: blur(3px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Shimmering effect on input focus */
+input:focus, textarea:focus, select:focus {
+  box-shadow: 0 0 0 2px rgba(70, 100, 255, 0.05) !important;
+  transform: translateY(-1px);
+}
+
+/* Smooth dropdown animations */
+.animate-dropdown-in {
+  animation: dropdownIn 0.2s ease-out forwards;
+}
+
+.animate-dropdown-out {
+  animation: dropdownOut 0.2s ease-in forwards;
+}
+
+@keyframes dropdownIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes dropdownOut {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+}
+
+/* Improved button pulse/click animations */
+@keyframes buttonPulse {
+  0% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.1); }
+  70% { box-shadow: 0 0 0 5px rgba(0, 0, 0, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
+}
+
+.button-pulse:active {
+  animation: buttonPulse 0.3s ease-out;
+}
+
+/* Smooth page transitions */
+.page-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms, transform 300ms;
+}
+
+.page-exit {
+  opacity: 1;
+}
+
+.page-exit-active {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 300ms, transform 300ms;
 }
 
 @media (max-width: 640px) {
@@ -83,4 +183,499 @@ body {
   input, select, textarea {
     font-size: 16px !important; /* Prevent iOS zoom */
   }
+}
+
+/* Import datepicker styles */
+@import 'react-datepicker/dist/react-datepicker.css';
+
+/* Custom styles for react-big-calendar */
+.rbc-calendar {
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.875rem;
+  height: 100%;
+}
+
+/* Header styles */
+.rbc-toolbar {
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #E2E8F0;
+  flex-wrap: wrap;
+  row-gap: 0.5rem;
+}
+
+.rbc-toolbar button {
+  font-weight: 500;
+  border-radius: 0.375rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0.5rem 0.75rem;
+  min-height: unset;
+}
+
+.rbc-toolbar button.rbc-active {
+  background-color: #1A202C;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.rbc-toolbar button:hover {
+  background-color: #EDF2F7;
+  transform: translateY(-1px);
+}
+
+.rbc-toolbar button.rbc-active:hover {
+  background-color: #2D3748;
+}
+
+.rbc-toolbar-label {
+  font-weight: 500;
+  font-size: 1.125rem;
+  color: #1A202C;
+}
+
+/* Month view styles */
+.rbc-month-view {
+  border-radius: 0.5rem;
+  overflow: hidden;
+  border: 1px solid #E2E8F0;
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  background: linear-gradient(145deg, #ffffff, #fefefe);
+}
+
+.rbc-month-row {
+  border-color: #E2E8F0;
+  overflow: visible !important; /* Changed to make sure events don't get cut off */
+  flex: 1 0 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.rbc-date-cell {
+  padding: 0.25rem 0.5rem;
+  text-align: right;
+  color: #4A5568;
+  font-size: 0.875rem;
+}
+
+.rbc-date-cell.rbc-now {
+  font-weight: 600;
+  color: #3182CE;
+}
+
+.rbc-month-view .rbc-row-bg {
+  display: flex;
+  flex: 1 0 0;
+  overflow: hidden;
+}
+
+.rbc-day-bg {
+  background-color: #FFFFFF;
+  flex: 1 0 0;
+}
+
+.rbc-off-range-bg {
+  background-color: #F7FAFC;
+}
+
+.rbc-today {
+  background-color: #EBF4FF;
+}
+
+.rbc-header {
+  padding: 0.5rem;
+  font-weight: 600;
+  color: #4A5568;
+  border-color: #E2E8F0;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
+
+/* Event styles - improved containment */
+.rbc-event {
+  border-radius: 0.25rem;
+  background-color: transparent;
+  border: none;
+  padding: 0 !important;
+  margin: 0 2px 2px 2px !important;
+  overflow: visible; /* Changed to visible to prevent cutoff */
+  position: relative !important; /* Ensure proper stacking */
+  z-index: 2; /* Ensure events are above the "more" link */
+}
+
+.calendar-event {
+  padding: 4px 6px;
+  border-radius: 4px;
+  margin-bottom: 2px;
+  overflow: hidden;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.calendar-event:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+/* View-specific event styling */
+.month-view-event {
+  font-size: 0.7rem;
+  line-height: 1.2;
+  max-height: 100%;
+  /* Ensure entire event stays within its container */
+  position: relative;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.month-view-event .event-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.month-view-event .event-details,
+.month-view-event .event-owner {
+  display: none;
+}
+
+.week-view-event,
+.day-view-event {
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.week-view-event .event-details,
+.day-view-event .event-details {
+  display: block;
+  margin-top: 2px;
+}
+
+.day-view-event .event-owner {
+  display: block;
+  margin-top: 2px;
+}
+
+.rbc-event-content {
+  font-size: 0.75rem;
+  color: #4A5568;
+  overflow: hidden;
+  height: 100%;
+}
+
+.rbc-row-segment {
+  padding: 0 1px 1px 1px !important; /* Add padding to prevent event cutoff */
+}
+
+/* Tooltip styling */
+.event-tooltip {
+  box-shadow: 0 4px 15px -1px rgba(0, 0, 0, 0.1), 0 2px 8px -1px rgba(0, 0, 0, 0.06);
+  transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+  z-index: 9999;
+  max-width: 320px;
+  animation: fadeIn 0.2s;
+  background: linear-gradient(145deg, #ffffff, #fefefe);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(5px);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Status-specific event styling */
+.event-done {
+  border-left-color: #48BB78 !important;
+}
+
+.event-in_progress {
+  border-left-color: #4299E1 !important;
+}
+
+.event-blocked {
+  border-left-color: #F56565 !important;
+}
+
+.event-not_applicable {
+  border-left-color: #A0AEC0 !important;
+}
+
+.event-yet_to_start {
+  border-left-color: #ECC94B !important;
+}
+
+/* Week and Day view styles */
+.rbc-time-view {
+  border: 1px solid #E2E8F0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background-color: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.rbc-time-header {
+  border-color: #E2E8F0;
+}
+
+.rbc-time-content {
+  border-color: #E2E8F0;
+  flex: 1 0 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.rbc-time-slot {
+  color: #718096;
+  font-size: 0.75rem;
+}
+
+.rbc-time-gutter {
+  font-size: 0.75rem;
+  color: #718096;
+}
+
+.rbc-day-slot .rbc-time-slot {
+  border-color: #EDF2F7;
+}
+
+/* Agenda view styles */
+.rbc-agenda-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+
+.rbc-agenda-view table {
+  border-radius: 0.5rem;
+  overflow: hidden;
+  border-color: #E2E8F0;
+  width: 100%;
+}
+
+.rbc-agenda-view table th {
+  font-weight: 600;
+  padding: 0.75rem;
+  border-bottom: 2px solid #E2E8F0;
+  color: #4A5568;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.rbc-agenda-view table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.rbc-agenda-time-cell {
+  font-size: 0.875rem;
+  color: #4A5568;
+}
+
+.rbc-agenda-event-cell {
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+/* Adjustments for viewport sizing */
+.calendar-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 210px);
+  min-height: 500px;
+  max-width: 1800px;
+  margin: 0 auto;
+  border-radius: 12px;
+  overflow: hidden;
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+}
+
+/* Fix for day cells to maintain proper scaling */
+.rbc-month-view .rbc-month-row {
+  min-height: 0;
+  overflow: visible;
+}
+
+.rbc-row-content {
+  min-height: 0;
+  position: relative;
+  z-index: 2; /* Below events but above background */
+}
+
+.rbc-row-content-scrollable {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+}
+
+/* Better support for event display in small cells */
+.rbc-event-label {
+  font-size: 0.7rem;
+}
+
+.rbc-event.rbc-selected {
+  background-color: rgba(66, 153, 225, 0.2);
+}
+
+.rbc-event:focus {
+  outline: none;
+}
+
+/* Optimized popup styling */
+.rbc-overlay {
+  z-index: 40;
+  border: 1px solid #E2E8F0;
+  background-color: #FFFFFF;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+}
+
+/* Fix "more" link in month view */
+.rbc-show-more {
+  font-size: 0.75rem !important;
+  font-weight: 500;
+  color: #4A5568;
+  background-color: transparent !important;
+  padding: 2px 4px !important;
+  z-index: 5 !important; /* Ensure above events */
+  position: relative !important; /* Necessary for z-index to work */
+  display: block !important; /* Ensure visibility */
+  margin-right: 8px !important; /* Add some right margin */
+  text-decoration: none !important;
+}
+
+.rbc-show-more:hover {
+  text-decoration: underline !important;
+  color: #1A202C !important;
+  background-color: transparent !important;
+}
+
+/* Ensure "more" link is visible */
+.rbc-row-content {
+  z-index: 2; /* Below events but above background */
+}
+
+/* Ensure bottom row shows "more" links */
+.rbc-month-view .rbc-month-row:last-child .rbc-row-content {
+  padding-bottom: 2px; /* Add padding at the bottom */
+  min-height: 20px !important; /* Ensure minimum height */
+}
+
+/* Fix cell content container */
+.rbc-day-bg + .rbc-day-bg {
+  position: relative;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .calendar-container {
+    height: calc(100vh - 180px);
+    min-height: 400px;
+  }
+  
+  .rbc-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0.5rem;
+  }
+  
+  .rbc-toolbar-label {
+    margin: 0.5rem 0;
+  }
+  
+  .rbc-btn-group {
+    margin: 0.25rem 0;
+  }
+  
+  .month-view-event {
+    font-size: 0.65rem;
+  }
+  
+  .rbc-header {
+    padding: 0.25rem;
+    font-size: 0.7rem;
+  }
+
+  .rbc-event {
+    margin: 0 1px 1px 1px !important;
+  }
+  
+  /* Tooltip adjustment for mobile */
+  .event-tooltip {
+    max-width: 85vw !important;
+    position: fixed !important;
+    /* Bottom positioning */
+    top: auto !important;
+    bottom: 20px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    z-index: 100 !important;
+    max-height: 60vh !important;
+    overflow-y: auto !important;
+  }
+  
+  /* Make "more" link more obvious */
+  .rbc-show-more {
+    font-size: 0.7rem !important;
+    font-weight: 600 !important;
+    padding: 3px 5px !important;
+    margin-top: 1px !important;
+    background-color: rgba(66, 153, 225, 0.05) !important;
+    text-align: center !important;
+    border-radius: 4px !important;
+  }
+}
+
+/* Custom animations for smooth transitions */
+.rbc-calendar {
+  transition: height 0.3s ease-in-out;
+}
+
+.rbc-calendar .rbc-month-view {
+  transition: height 0.3s ease-in-out;
+}
+
+/* Show more positioning adjustments */
+.rbc-row-content {
+  margin-bottom: 5px; /* Create space for "more" link */
+}
+
+/* Ensure "more" position */
+.rbc-row-segment:last-child .rbc-show-more {
+  margin-right: 0 !important;
+}
+
+/* Improve "more" contrast and visibility */
+.rbc-show-more {
+  color: #3182CE !important;
+  background-color: rgba(235, 244, 255, 0.7) !important;
+  border-radius: 3px !important;
+  font-weight: 600 !important;
+}
+
+/* Fix for "more" links being cut off at the bottom */
+.rbc-month-view .rbc-month-row:last-child .rbc-row-segment:last-child {
+  padding-bottom: 20px !important; /* Extra space at the bottom */
 }

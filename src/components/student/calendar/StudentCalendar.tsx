@@ -407,7 +407,8 @@ export default function StudentCalendar({ studentId, student }: StudentCalendarP
     };
 
     return (
-      <div
+      <motion.div
+        whileHover={{ y: -1, boxShadow: "0 2px 5px rgba(0,0,0,0.1)" }}
         className={`calendar-event ${activeView.toLowerCase()}-view-event overflow-hidden rounded-md shadow-sm`}
         style={{ 
           backgroundColor: event.color,
@@ -430,7 +431,7 @@ export default function StudentCalendar({ studentId, student }: StudentCalendarP
             Owner: {event.owner.join(', ')}
           </div>
         )}
-      </div>
+      </motion.div>
     );
   };
 
@@ -451,7 +452,7 @@ export default function StudentCalendar({ studentId, student }: StudentCalendarP
         case 'blocked':
           return 'bg-red-100 text-red-700 border-red-200';
         case 'not_applicable':
-          return 'bg-gray-100 text-gray-700 border-gray-200';
+          return 'bg-gray-100 text-gray-500 border-gray-200';
         default: // yet_to_start
           return 'bg-yellow-100 text-yellow-700 border-yellow-200';
       }
@@ -463,7 +464,11 @@ export default function StudentCalendar({ studentId, student }: StudentCalendarP
     };
     
     return (
-      <div 
+      <motion.div 
+        initial={{ opacity: 0, y: 5 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 5 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
         className="fixed z-50 bg-white rounded-lg shadow-xl border border-gray-100 p-4 event-tooltip"
         style={{
           top: `${tooltipPosition.top}px`,
@@ -475,12 +480,14 @@ export default function StudentCalendar({ studentId, student }: StudentCalendarP
       >
         {/* Close button for touch devices */}
         {isTouchDevice && (
-          <button 
+          <motion.button 
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
             onClick={handleCloseTooltip}
             className="absolute top-2 right-2 p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
           >
             <X className="h-4 w-4" />
-          </button>
+          </motion.button>
         )}
         
         <div className="flex items-start mb-3">
@@ -501,10 +508,13 @@ export default function StudentCalendar({ studentId, student }: StudentCalendarP
           
           <div className="flex items-center mb-2">
             <span className="text-sm text-gray-700 flex items-center">
-              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs border ${getStatusColor(event.status)}`}>
+              <motion.span 
+                whileHover={{ y: -1 }}
+                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs border ${getStatusColor(event.status)}`}
+              >
                 <span className="mr-1">{getStatusIcon(event.status)}</span>
                 {getStatusText(event.status)}
-              </span>
+              </motion.span>
             </span>
           </div>
           
@@ -534,7 +544,7 @@ export default function StudentCalendar({ studentId, student }: StudentCalendarP
             <p className="text-sm text-gray-700 italic break-words">{event.remark}</p>
           </div>
         )}
-      </div>
+      </motion.div>
     );
   };
 
@@ -575,13 +585,35 @@ export default function StudentCalendar({ studentId, student }: StudentCalendarP
     }
   };
 
+  // Search input animation
+  const searchVariants = {
+    focus: {
+      boxShadow: "0 0 0 3px rgba(66, 153, 225, 0.15)",
+      scale: 1.01,
+      y: -1
+    }
+  };
+  
+  // Button animation
+  const buttonVariants = {
+    hover: { scale: 1.05, y: -1 },
+    tap: { scale: 0.95, y: 0 }
+  };
+
   return (
     <div className="p-4 md:p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg md:text-xl font-light text-gray-800">Calendar for {student.name}</h2>
+        <motion.h2 
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="text-lg md:text-xl font-light text-gray-800"
+        >
+          Calendar for {student.name}
+        </motion.h2>
         <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+          variants={buttonVariants}
+          whileHover="hover"
+          whileTap="tap"
           onClick={handleRefresh}
           disabled={refreshing}
           className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500"
@@ -592,7 +624,11 @@ export default function StudentCalendar({ studentId, student }: StudentCalendarP
       </div>
       
       {error && (
-        <div className="mb-6 p-3 bg-red-50 text-red-700 text-sm rounded-lg flex items-center justify-between">
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 p-3 bg-red-50 text-red-700 text-sm rounded-lg flex items-center justify-between"
+        >
           <div className="flex items-center">
             <AlertTriangle className="h-5 w-5 mr-2 flex-shrink-0" />
             {error}
@@ -600,34 +636,42 @@ export default function StudentCalendar({ studentId, student }: StudentCalendarP
           <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700">
             <X className="h-4 w-4" />
           </button>
-        </div>
+        </motion.div>
       )}
       
       {/* Search and Export */}
       <div className="mb-6 flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <input
+        <motion.div className="relative flex-1">
+          <motion.input
+            whileFocus="focus"
+            variants={searchVariants}
             type="text"
             placeholder="Search tasks..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-300 bg-gray-50"
+            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-300 bg-white shadow-sm"
           />
           <Search className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
-        </div>
+        </motion.div>
         
         <div className="flex gap-2">
           {/* Export Dropdown */}
           <div className="relative" ref={exportRef}>
             <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
+              variants={buttonVariants}
+              whileHover="hover"
+              whileTap="tap"
               onClick={() => setShowExportOptions(!showExportOptions)}
-              className="px-4 py-3 rounded-lg bg-gray-800 text-white flex items-center hover:bg-gray-700 transition-colors whitespace-nowrap"
+              className="px-4 py-3 rounded-lg bg-gray-800 text-white flex items-center hover:bg-gray-700 transition-colors whitespace-nowrap shadow-sm"
             >
               <Download className="h-4 w-4 mr-2" />
               Export
-              <ChevronDown className={`ml-2 h-4 w-4 transform transition-transform ${showExportOptions ? 'rotate-180' : ''}`} />
+              <motion.div
+                animate={{ rotate: showExportOptions ? 180 : 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </motion.div>
             </motion.button>
             
             <AnimatePresence>
@@ -635,25 +679,28 @@ export default function StudentCalendar({ studentId, student }: StudentCalendarP
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg z-10 border border-gray-200"
+                  exit={{ opacity: 0, y: -10, transition: { duration: 0.15 } }}
+                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                  className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg z-10 border border-gray-200 overflow-hidden"
                 >
-                  <div className="py-1">
-                    <button
+                  <motion.div className="py-1">
+                    <motion.button
+                      whileHover={{ backgroundColor: "#f3f4f6" }}
                       onClick={() => handleExport('pdf')}
                       className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                     >
                       <FileText className="h-4 w-4 mr-2 text-gray-500" />
                       Export as PDF
-                    </button>
-                    <button
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ backgroundColor: "#f3f4f6" }}
                       onClick={() => handleExport('csv')}
                       className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                     >
                       <FileText className="h-4 w-4 mr-2 text-gray-500" />
                       Export as CSV
-                    </button>
-                  </div>
+                    </motion.button>
+                  </motion.div>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -662,7 +709,10 @@ export default function StudentCalendar({ studentId, student }: StudentCalendarP
       </div>
       
       {/* Calendar View */}
-      <div 
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
         className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden calendar-container" 
         ref={calendarContainerRef}
         style={{ height: `${calendarHeight}px` }}
@@ -701,30 +751,56 @@ export default function StudentCalendar({ studentId, student }: StudentCalendarP
             />
           </div>
         ) : (
-          <div className="text-center py-12 flex items-center justify-center h-full">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-12 flex items-center justify-center h-full"
+          >
             <div>
-              <div className="flex justify-center mb-4">
+              <motion.div 
+                initial={{ y: 10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="flex justify-center mb-4"
+              >
                 <CalendarIcon className="h-12 w-12 text-gray-300" />
-              </div>
-              <h3 className="text-gray-600 font-medium mb-2">No Tasks with Due Dates</h3>
-              <p className="text-gray-500 max-w-md mx-auto">
+              </motion.div>
+              <motion.h3 
+                initial={{ y: 10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="text-gray-600 font-medium mb-2"
+              >
+                No Tasks with Due Dates
+              </motion.h3>
+              <motion.p 
+                initial={{ y: 10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.4 }}
+                className="text-gray-500 max-w-md mx-auto"
+              >
                 {searchTerm
                   ? "No tasks match your search criteria."
                   : "No tasks with due dates found. Add due dates to tasks to see them in the calendar."}
-              </p>
+              </motion.p>
             </div>
-          </div>
+          </motion.div>
         )}
-      </div>
+      </motion.div>
       
       {/* Legend */}
-      <div className="mt-6">
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3, duration: 0.4 }}
+        className="mt-6"
+      >
         <h3 className="text-sm font-medium text-gray-700 mb-3">Legend</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
           {phases.map(phase => (
             <div key={phase.id} className="flex items-center">
               <div
-                className="w-4 h-4 rounded-sm mr-2 flex-shrink-0"
+                className="w-4 h-4 rounded-sm mr-2 flex-shrink-0 shadow-sm"
                 style={{ backgroundColor: getPhaseColor(phase.name) }}
               ></div>
               <span className="text-xs text-gray-600 truncate">{phase.name}</span>
@@ -735,31 +811,33 @@ export default function StudentCalendar({ studentId, student }: StudentCalendarP
         <div className="w-full mt-3 border-t border-gray-100 pt-3"></div>
         
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-          <div className="flex items-center">
+          <motion.div whileHover={{ y: -1 }} className="flex items-center">
             <div className="h-2 w-2 rounded-full bg-yellow-500 mr-2 flex-shrink-0"></div>
             <span className="text-xs text-gray-600">Yet to Start</span>
-          </div>
-          <div className="flex items-center">
+          </motion.div>
+          <motion.div whileHover={{ y: -1 }} className="flex items-center">
             <div className="h-2 w-2 rounded-full bg-blue-500 mr-2 flex-shrink-0"></div>
             <span className="text-xs text-gray-600">In Progress</span>
-          </div>
-          <div className="flex items-center">
+          </motion.div>
+          <motion.div whileHover={{ y: -1 }} className="flex items-center">
             <div className="h-2 w-2 rounded-full bg-green-500 mr-2 flex-shrink-0"></div>
             <span className="text-xs text-gray-600">Done</span>
-          </div>
-          <div className="flex items-center">
+          </motion.div>
+          <motion.div whileHover={{ y: -1 }} className="flex items-center">
             <div className="h-2 w-2 rounded-full bg-red-500 mr-2 flex-shrink-0"></div>
             <span className="text-xs text-gray-600">Blocked</span>
-          </div>
-          <div className="flex items-center">
+          </motion.div>
+          <motion.div whileHover={{ y: -1 }} className="flex items-center">
             <div className="h-2 w-2 rounded-full bg-gray-500 mr-2 flex-shrink-0"></div>
             <span className="text-xs text-gray-600">Not Applicable</span>
-          </div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
       
       {/* Event Tooltip */}
-      {(hoveredEvent || selectedEvent) && <EventTooltip />}
+      <AnimatePresence>
+        {(hoveredEvent || selectedEvent) && <EventTooltip />}
+      </AnimatePresence>
     </div>
   );
 }

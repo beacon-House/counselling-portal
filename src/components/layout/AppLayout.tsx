@@ -55,8 +55,52 @@ export default function AppLayout() {
     }
   };
 
+  // Enhanced Animation Variants
+  const sidebarVariants = {
+    hidden: { x: -280, opacity: 0 },
+    visible: { 
+      x: 0, 
+      opacity: 1,
+      transition: { 
+        type: "spring", 
+        stiffness: 300, 
+        damping: 30
+      }
+    },
+    exit: { 
+      x: -280, 
+      opacity: 0,
+      transition: { 
+        ease: "easeInOut", 
+        duration: 0.3 
+      }
+    }
+  };
+
+  const rightPanelVariants = {
+    hidden: { width: 0, opacity: 0 },
+    visible: (isMobile) => ({
+      width: isMobile ? '100%' : 480, 
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 300,
+        damping: 30,
+        opacity: { duration: 0.2 }
+      }
+    }),
+    exit: { 
+      width: 0, 
+      opacity: 0,
+      transition: { 
+        ease: "easeInOut", 
+        duration: 0.3 
+      }
+    }
+  };
+
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
+    <div className="h-screen flex flex-col bg-glossy-white">
       <Header 
         counsellorName={counsellor?.name || ''} 
         toggleRightPanel={toggleRightPanel}
@@ -67,23 +111,32 @@ export default function AppLayout() {
       <div className="flex flex-1 overflow-hidden">
         {/* Overlay for mobile (to close sidebar when clicking outside) */}
         {showSidebar && (
-          <div 
-            className="md:hidden fixed inset-0 bg-black bg-opacity-30 z-30"
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="md:hidden fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm z-30"
             onClick={toggleSidebar}
-          ></div>
+          ></motion.div>
         )}
 
         {/* Left Sidebar - Student Folders */}
         <AnimatePresence mode="wait">
           {showSidebar && (
             <motion.div
-              initial={{ x: -280, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -280, opacity: 0 }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
+              variants={sidebarVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
               className="md:relative fixed z-40 h-full bg-white w-[280px] md:w-[280px] shadow-md md:shadow-none"
             >
-              <div className="flex justify-end p-2 md:hidden">
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.1 }}
+                className="flex justify-end p-2 md:hidden"
+              >
                 <button
                   onClick={toggleSidebar}
                   aria-label="Close sidebar"
@@ -91,7 +144,7 @@ export default function AppLayout() {
                 >
                   <X size={18} className="text-gray-500" />
                 </button>
-              </div>
+              </motion.div>
               <Sidebar />
             </motion.div>
           )}
@@ -109,22 +162,30 @@ export default function AppLayout() {
         <AnimatePresence>
           {showRightPanel && (
             <motion.div 
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: window.innerWidth < 768 ? '100%' : 480, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
+              variants={rightPanelVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              custom={window.innerWidth < 768}
               className="md:relative fixed inset-0 md:inset-auto z-40 bg-white border-l border-gray-100 shadow-lg overflow-auto"
             >
-              <div className="sticky top-0 bg-white p-4 border-b border-gray-100 flex justify-between items-center">
+              <motion.div 
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="sticky top-0 bg-white p-4 border-b border-gray-100 flex justify-between items-center"
+              >
                 <h2 className="text-lg font-light">AI Assistant</h2>
-                <button 
+                <motion.button 
                   onClick={toggleRightPanel}
                   aria-label="Close AI panel"
                   className="p-1 rounded-full hover:bg-gray-100 transition-all"
+                  whileHover={{ scale: 1.1, rotate: 5 }}
+                  whileTap={{ scale: 0.9 }}
                 >
                   <X size={18} className="text-gray-500" />
-                </button>
-              </div>
+                </motion.button>
+              </motion.div>
               <AIChatPanel />
             </motion.div>
           )}
