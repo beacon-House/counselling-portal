@@ -100,7 +100,7 @@ export default function AppLayout() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-glossy-white">
+    <div className="h-screen flex flex-col bg-white">
       <Header 
         counsellorName={counsellor?.name || ''} 
         toggleRightPanel={toggleRightPanel}

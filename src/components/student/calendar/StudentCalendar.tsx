@@ -111,7 +111,7 @@ export default function StudentCalendar({ studentId, student }: StudentCalendarP
     };
   }, []);
 
-  // Handle click outside to close dropdowns
+  // Handle click outside to close dropdowns and tooltips
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (exportRef.current && !exportRef.current.contains(e.target as Node)) {
@@ -122,11 +122,16 @@ export default function StudentCalendar({ studentId, student }: StudentCalendarP
       if (hoveredEvent && tooltipRef.current && !tooltipRef.current.contains(e.target as Node)) {
         setHoveredEvent(null);
       }
+      
+      // Close selected event tooltip
+      if (selectedEvent && tooltipRef.current && !tooltipRef.current.contains(e.target as Node)) {
+        setSelectedEvent(null);
+      }
     };
     
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [hoveredEvent]);
+  }, [hoveredEvent, selectedEvent]);
 
   // Adjust calendar height based on viewport
   useEffect(() => {
@@ -469,7 +474,7 @@ export default function StudentCalendar({ studentId, student }: StudentCalendarP
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 5 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className="fixed z-50 bg-white rounded-lg shadow-xl border border-gray-100 p-4 event-tooltip"
+        className="fixed z-[9999] bg-white rounded-lg shadow-xl border border-gray-100 p-4 event-tooltip"
         style={{
           top: `${tooltipPosition.top}px`,
           left: `${tooltipPosition.left}px`,

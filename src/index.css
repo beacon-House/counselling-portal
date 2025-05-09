@@ -10,15 +10,22 @@ html, body, #root {
 
 body {
   font-family: 'Poppins', sans-serif;
-  background: linear-gradient(to bottom, #ffffff, #fafafa);
+  background: #ffffff;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Premium glossy styling for containers */
-.bg-white {
-  background: linear-gradient(145deg, #ffffff, #fefefe);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+/* Plain white backgrounds - no glossy effects */
+.bg-white, 
+.bg-glossy-white, 
+.bg-glossy-light,
+header,
+.calendar-container,
+.rbc-calendar,
+.event-tooltip {
+  background: #ffffff !important;
+  background-image: none !important;
+  backdrop-filter: none !important;
 }
 
 /* Add base transition for all interactive elements */
@@ -90,22 +97,14 @@ button.rounded-full {
 /* Enhanced hover effects */
 button:hover, a:hover, [role="button"]:hover {
   transform: translateY(-1px);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
 }
 
 button:active, a:active, [role="button"]:active {
   transform: translateY(0px);
 }
 
-/* Glossy card effect */
-.rounded-lg, .rounded-xl {
-  backdrop-filter: blur(3px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-/* Shimmering effect on input focus */
+/* Subtle effect on input focus */
 input:focus, textarea:focus, select:focus {
-  box-shadow: 0 0 0 2px rgba(70, 100, 255, 0.05) !important;
   transform: translateY(-1px);
 }
 
@@ -173,6 +172,28 @@ input:focus, textarea:focus, select:focus {
   transition: opacity 300ms, transform 300ms;
 }
 
+/* Higher z-index for tooltips */
+[role="tooltip"], 
+.tooltip,
+.calendar-event-tooltip,
+.event-tooltip,
+.rbc-overlay,
+.rbc-show-more {
+  z-index: 9999 !important;
+}
+
+/* Make sure tooltips appear above all other elements */
+.event-tooltip {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+  max-width: 320px;
+  animation: fadeIn 0.2s;
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  z-index: 9999 !important;
+  backdrop-filter: none !important;
+}
+
 @media (max-width: 640px) {
   /* Adjust font sizes for small screens */
   html {
@@ -217,7 +238,6 @@ input:focus, textarea:focus, select:focus {
   background-color: #1A202C;
   color: white;
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .rbc-toolbar button:hover {
@@ -243,7 +263,7 @@ input:focus, textarea:focus, select:focus {
   flex: 1;
   min-height: 0;
   height: auto;
-  background: linear-gradient(145deg, #ffffff, #fefefe);
+  background: #ffffff;
 }
 
 .rbc-month-row {
@@ -304,7 +324,7 @@ input:focus, textarea:focus, select:focus {
   margin: 0 2px 2px 2px !important;
   overflow: visible; /* Changed to visible to prevent cutoff */
   position: relative !important; /* Ensure proper stacking */
-  z-index: 2; /* Ensure events are above the "more" link */
+  z-index: 5; /* Higher z-index for events */
 }
 
 .calendar-event {
@@ -315,12 +335,11 @@ input:focus, textarea:focus, select:focus {
   box-sizing: border-box;
   width: 100%;
   height: 100%;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.2s;
 }
 
 .calendar-event:hover {
   transform: translateY(-1px);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   z-index: 10;
 }
 
@@ -329,7 +348,6 @@ input:focus, textarea:focus, select:focus {
   font-size: 0.7rem;
   line-height: 1.2;
   max-height: 100%;
-  /* Ensure entire event stays within its container */
   position: relative;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
@@ -377,14 +395,14 @@ input:focus, textarea:focus, select:focus {
 
 /* Tooltip styling */
 .event-tooltip {
-  box-shadow: 0 4px 15px -1px rgba(0, 0, 0, 0.1), 0 2px 8px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
-  z-index: 9999;
+  z-index: 9999 !important;
   max-width: 320px;
   animation: fadeIn 0.2s;
-  background: linear-gradient(145deg, #ffffff, #fefefe);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(5px);
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  backdrop-filter: none !important;
 }
 
 @keyframes fadeIn {
@@ -506,9 +524,9 @@ input:focus, textarea:focus, select:focus {
   margin: 0 auto;
   border-radius: 12px;
   overflow: hidden;
-  backdrop-filter: blur(5px);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  background: #ffffff !important;
 }
 
 /* Fix for day cells to maintain proper scaling */
@@ -544,7 +562,7 @@ input:focus, textarea:focus, select:focus {
 
 /* Optimized popup styling */
 .rbc-overlay {
-  z-index: 40;
+  z-index: 9999 !important;
   border: 1px solid #E2E8F0;
   background-color: #FFFFFF;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -559,7 +577,7 @@ input:focus, textarea:focus, select:focus {
   color: #4A5568;
   background-color: transparent !important;
   padding: 2px 4px !important;
-  z-index: 5 !important; /* Ensure above events */
+  z-index: 9999 !important; /* Ensure above events */
   position: relative !important; /* Necessary for z-index to work */
   display: block !important; /* Ensure visibility */
   margin-right: 8px !important; /* Add some right margin */
@@ -570,17 +588,6 @@ input:focus, textarea:focus, select:focus {
   text-decoration: underline !important;
   color: #1A202C !important;
   background-color: transparent !important;
-}
-
-/* Ensure "more" link is visible */
-.rbc-row-content {
-  z-index: 2; /* Below events but above background */
-}
-
-/* Ensure bottom row shows "more" links */
-.rbc-month-view .rbc-month-row:last-child .rbc-row-content {
-  padding-bottom: 2px; /* Add padding at the bottom */
-  min-height: 20px !important; /* Ensure minimum height */
 }
 
 /* Fix cell content container */
@@ -631,9 +638,10 @@ input:focus, textarea:focus, select:focus {
     bottom: 20px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
-    z-index: 100 !important;
+    z-index: 9999 !important;
     max-height: 60vh !important;
     overflow-y: auto !important;
+    background: #ffffff !important;
   }
   
   /* Make "more" link more obvious */
@@ -673,6 +681,8 @@ input:focus, textarea:focus, select:focus {
   background-color: rgba(235, 244, 255, 0.7) !important;
   border-radius: 3px !important;
   font-weight: 600 !important;
+  z-index: 9999 !important;
+  position: relative !important;
 }
 
 /* Fix for "more" links being cut off at the bottom */

@@ -171,7 +171,7 @@ export default function TaskItem({
   return (
     <div key={task.id} className="mt-2">
       <motion.div 
-        className={`flex justify-between items-center p-2.5 md:p-3 cursor-pointer rounded-lg transition-colors duration-200 ${
+        className={`flex flex-wrap md:flex-nowrap justify-between items-center p-2.5 md:p-3 cursor-pointer rounded-lg transition-colors duration-200 ${
           isActive ? 'bg-gray-100' : 'hover:bg-gray-50'
         }`}
         onClick={handleTaskToggle}
@@ -179,7 +179,7 @@ export default function TaskItem({
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
-        <div className="flex items-center min-w-0">
+        <div className="flex items-center min-w-0 w-full md:w-auto">
           <motion.div
             initial={false}
             animate={{ rotate: isExpanded ? 90 : 0 }}
@@ -188,7 +188,7 @@ export default function TaskItem({
           >
             <ChevronRight className="h-4 w-4 text-gray-400 mr-2" />
           </motion.div>
-          <div className="relative flex items-center">
+          <div className="relative flex items-center flex-1 min-w-0">
             <span className="text-gray-700 truncate">{task.sequence}. {task.name}</span>
             
             {/* New Indicator for AI-generated subtasks */}
@@ -196,7 +196,7 @@ export default function TaskItem({
               <span className="ml-2 relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
-                <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 -translate-y-1 text-xs text-indigo-600 whitespace-nowrap hidden sm:block">
+                <span className="absolute -top-5 left-1/2 transform -translate-x-1/2 text-xs text-indigo-600 whitespace-nowrap hidden sm:block">
                   New AI tasks
                 </span>
               </span>
@@ -220,20 +220,22 @@ export default function TaskItem({
             {showTooltip && task.subtask_suggestion && (
               <div 
                 ref={tooltipRef}
-                className="absolute z-10 bg-gray-800 text-white text-xs p-2 rounded-md shadow-lg max-w-xs"
+                className="absolute z-[9999] bg-white text-gray-800 text-xs p-3 rounded-md shadow-md max-w-xs"
                 style={{
-                  top: '100%',
+                  top: '130%',
                   left: '0',
                   marginTop: '8px',
                   whiteSpace: 'normal',
+                  border: '1px solid rgba(0, 0, 0, 0.1)',
                   ...getTooltipPosition()
                 }}
               >
+                <div className="font-medium mb-1 text-gray-900">Task Suggestion:</div>
                 {task.subtask_suggestion}
                 <div 
-                  className="absolute w-2 h-2 bg-gray-800 transform rotate-45" 
+                  className="absolute w-2 h-2 bg-white transform rotate-45 border-t border-l border-gray-200" 
                   style={{
-                    top: '-4px',
+                    top: '-5px',
                     left: '12px'
                   }}
                 />
@@ -242,11 +244,11 @@ export default function TaskItem({
           </div>
         </div>
 
-        {/* Subtask count indicator - always visible */}
-        <div className="flex items-center">
+        {/* Subtask count indicator - simplified to just the number */}
+        <div className="flex items-center mt-2 md:mt-0 ml-6 md:ml-0 w-full md:w-auto">
           <span className="flex items-center text-xs font-medium px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
             <ClipboardList className="h-3.5 w-3.5 mr-1.5" />
-            {subtasks.length} subtasks
+            {subtasks.length}
           </span>
         </div>
       </motion.div>
