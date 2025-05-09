@@ -4,7 +4,7 @@
  * Uses OpenAI API for contextual responses and student data analysis
  */
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, User, X, Search, Bot, Smile, AtSign } from 'lucide-react';
+import { Send, User, X, Search, Bot, Smile, AtSign, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../lib/supabase';
 import { Student, Note, Subtask } from '../../types/types';
@@ -53,8 +53,8 @@ export default function AIChatPanel() {
   const [studentDataCache, setStudentDataCache] = useState<Record<string, any>>({});
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const chatContainerRef = useRef<HTMLDivElement>(null);
   const openai = useRef<OpenAI | null>(null);
   
   // Initialize OpenAI client
@@ -71,7 +71,9 @@ export default function AIChatPanel() {
 
   // Scroll to bottom when new messages are added
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages]);
 
   // Initialize with a welcome message
@@ -467,57 +469,91 @@ progress, and recent notes if available.`;
     }
   };
 
+  // Auto-resize textarea as user types
+  const autoResizeTextarea = () => {
+    if (inputRef.current) {
+      // Reset height to auto to get the correct scrollHeight
+      inputRef.current.style.height = 'auto';
+      // Set the height to scrollHeight to ensure it fits the content
+      const newHeight = Math.min(inputRef.current.scrollHeight, 120); // Max height reduced to 120px
+      inputRef.current.style.height = `${newHeight}px`;
+    }
+  };
+
+  // Call autoResizeTextarea whenever input value changes
+  useEffect(() => {
+    autoResizeTextarea();
+  }, [inputValue]);
+
   return (
-    <div className="flex flex-col h-full" ref={chatContainerRef}>
-      {/* Chat messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4" ref={messagesEndRef}>
-        {messages.map(message => (
-          <div 
-            key={message.id} 
-            className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div 
-              className={`max-w-[85%] sm:max-w-[80%] rounded-lg p-3 ${
-                message.sender === 'user' 
-                  ? 'bg-gray-800 text-white' 
-                  : 'bg-gray-100 text-gray-800'
-              }`}
-            >
-              <div className="flex items-center mb-1">
-                {message.sender === 'user' ? (
-                  <User className="h-4 w-4 mr-2" />
-                ) : (
-                  <Bot className="h-4 w-4 mr-2" />
-                )}
-                <span className="text-xs opacity-70">
-                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              </div>
-              <p className="whitespace-pre-wrap text-sm">{message.text}</p>
-              {message.studentName && (
-                <div className="mt-1 text-xs bg-opacity-20 rounded px-1 py-0.5 inline-block">
-                  @{message.studentName}
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-        
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="bg-gray-100 text-gray-800 rounded-lg p-3">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse"></div>
-                <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse delay-100"></div>
-                <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse delay-200"></div>
-              </div>
-            </div>
-          </div>
-        )}
+    <div className="flex flex-col h-full bg-white">
+      {/* Chat header - Fixed at the top */}
+      <div className="sticky top-0 z-10 p-4 border-b border-gray-100 bg-white">
+        <h2 className="text-lg font-medium text-gray-800">AI Assistant</h2>
       </div>
       
-      {/* Input area */}
-      <div className="border-t border-gray-100 p-3 md:p-4">
+      {/* Messages container - Scrollable */}
+      <div 
+        className="flex-1 overflow-y-auto p-4 space-y-4" 
+        ref={messagesContainerRef}
+      >
+        <div className="min-h-full flex flex-col justify-end">
+          <div className="space-y-4">
+            {messages.map(message => (
+              <motion.div 
+                key={message.id} 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div 
+                  className={`max-w-[85%] sm:max-w-[80%] rounded-lg p-3 ${
+                    message.sender === 'user' 
+                      ? 'bg-gray-800 text-white' 
+                      : 'bg-gray-100 text-gray-800'
+                  }`}
+                >
+                  <div className="flex items-center mb-1">
+                    {message.sender === 'user' ? (
+                      <User className="h-4 w-4 mr-2" />
+                    ) : (
+                      <Bot className="h-4 w-4 mr-2" />
+                    )}
+                    <span className="text-xs opacity-70">
+                      {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  <div 
+                    className="whitespace-pre-wrap text-sm"
+                    dangerouslySetInnerHTML={{ __html: message.text }}
+                  />
+                  {message.studentName && (
+                    <div className="mt-1 text-xs bg-opacity-20 rounded px-1 py-0.5 inline-block">
+                      @{message.studentName}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+            
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-gray-100 text-gray-800 rounded-lg p-3">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse"></div>
+                    <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse delay-100"></div>
+                    <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse delay-200"></div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        </div>
+      </div>
+      
+      {/* Input area - Fixed at the bottom */}
+      <div className="sticky bottom-0 border-t border-gray-100 p-3 md:p-4 bg-white">
         <div className="relative">
           <textarea
             ref={inputRef}
@@ -525,60 +561,70 @@ progress, and recent notes if available.`;
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             placeholder="Type your query here... Use @ to mention a student"
-            className="w-full border border-gray-200 rounded-lg p-3 pr-14 min-h-[60px] max-h-[120px] md:min-h-[80px] md:max-h-[200px] resize-none focus:outline-none focus:ring-1 focus:ring-gray-300"
+            className="w-full border border-gray-200 rounded-lg py-2.5 px-4 pr-12 min-h-[48px] max-h-[120px] resize-none focus:outline-none focus:ring-1 focus:ring-gray-300"
+            style={{ overflowY: 'auto' }}
           />
           
           <button
             onClick={handleSubmit}
             disabled={!inputValue.trim() || isLoading}
-            className="absolute right-3 bottom-[10px] md:bottom-[14px] p-2 rounded-full bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+            className="absolute right-3 bottom-2.5 p-2 rounded-full bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
             aria-label="Send message"
           >
             <Send className="h-4 w-4" />
           </button>
           
           {inputValue.includes('@') && (
-            <div className="absolute left-3 bottom-2 md:bottom-3 flex items-center text-gray-400 text-xs">
+            <div className="absolute left-3 bottom-2 md:bottom-2.5 flex items-center text-gray-400 text-xs">
               <AtSign className="h-3 w-3 mr-1" />
               <span className="hidden sm:inline">Mention a student</span>
             </div>
           )}
         </div>
         
-        {/* Student suggestions dropdown */}
+        {/* Student suggestions dropdown - Enhanced version */}
         <AnimatePresence>
           {isMentioning && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="absolute bottom-full mb-2 w-full left-0 max-w-md bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50"
+              className="absolute bottom-full mb-2 left-0 w-full sm:max-w-sm bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-30"
             >
-              <div className="p-2 border-b border-gray-100 flex items-center">
-                <Search className="h-4 w-4 text-gray-400 mr-2" />
-                <span className="text-sm text-gray-600 truncate">
-                  {mentionQuery ? `Searching for "${mentionQuery}"` : 'Mention a student'}
-                </span>
+              <div className="p-3 border-b border-gray-100 bg-gray-50">
+                <div className="flex items-center">
+                  <Search className="h-4 w-4 text-gray-400 mr-2" />
+                  <span className="text-sm text-gray-600 font-medium">
+                    {mentionQuery ? `Searching for "${mentionQuery}"` : 'Mention a student'}
+                  </span>
+                </div>
               </div>
               
               {studentSuggestions.length > 0 ? (
-                <ul className="max-h-[200px] overflow-y-auto">
+                <ul className="max-h-[200px] overflow-y-auto py-1">
                   {studentSuggestions.map(student => (
-                    <li key={student.id}>
+                    <motion.li 
+                      key={student.id}
+                      whileHover={{ backgroundColor: "rgba(243, 244, 246, 1)" }}
+                    >
                       <button
                         onClick={() => handleStudentSelect(student)}
-                        className="w-full text-left px-3 py-2 hover:bg-gray-50 transition-colors flex items-center"
+                        className="w-full text-left px-3 py-2 hover:bg-gray-50 transition-colors flex items-center justify-between"
                       >
-                        <User className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
-                        <span className="text-sm font-medium truncate">{student.displayText}</span>
+                        <div className="flex items-center">
+                          <User className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
+                          <span className="text-sm font-medium text-gray-700">{student.name}</span>
+                          <span className="ml-2 text-xs text-gray-500 truncate">{student.displayText.split('(')[1]?.replace(')', '') || ''}</span>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-gray-300" />
                       </button>
-                    </li>
+                    </motion.li>
                   ))}
                 </ul>
               ) : (
-                <div className="p-3 text-sm text-gray-500 flex items-center">
+                <div className="p-4 text-sm text-gray-500 flex items-center justify-center">
                   <Smile className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
-                  <span className="truncate">
+                  <span>
                     {mentionQuery 
                       ? `No students found matching "${mentionQuery}"` 
                       : 'Type to search for students'}

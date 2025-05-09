@@ -80,7 +80,7 @@ export default function AppLayout() {
   const rightPanelVariants = {
     hidden: { width: 0, opacity: 0 },
     visible: (isMobile) => ({
-      width: isMobile ? '100%' : 480, 
+      width: isMobile ? '100%' : 360, // Increased width from 320 to 360
       opacity: 1,
       transition: {
         type: "spring",
@@ -167,26 +167,28 @@ export default function AppLayout() {
               animate="visible"
               exit="exit"
               custom={window.innerWidth < 768}
-              className="md:relative fixed inset-0 md:inset-auto z-40 bg-white border-l border-gray-100 shadow-lg overflow-auto"
+              className="md:relative fixed inset-0 md:inset-auto z-40 bg-white border-l border-gray-100 shadow-lg flex flex-col h-full"
+              style={{ maxWidth: window.innerWidth < 768 ? '100%' : '360px' }}
             >
+              {/* Close button for mobile view */}
               <motion.div 
-                initial={{ opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 transition={{ delay: 0.2 }}
-                className="sticky top-0 bg-white p-4 border-b border-gray-100 flex justify-between items-center"
+                className="md:hidden sticky top-0 z-20 p-2 flex justify-end bg-white"
               >
-                <h2 className="text-lg font-light">AI Assistant</h2>
-                <motion.button 
+                <button 
                   onClick={toggleRightPanel}
-                  aria-label="Close AI panel"
-                  className="p-1 rounded-full hover:bg-gray-100 transition-all"
-                  whileHover={{ scale: 1.1, rotate: 5 }}
-                  whileTap={{ scale: 0.9 }}
+                  className="p-2 rounded-full hover:bg-gray-100 transition-all"
                 >
                   <X size={18} className="text-gray-500" />
-                </motion.button>
+                </button>
               </motion.div>
-              <AIChatPanel />
+              
+              {/* Chat component */}
+              <div className="flex-1 overflow-hidden">
+                <AIChatPanel />
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
