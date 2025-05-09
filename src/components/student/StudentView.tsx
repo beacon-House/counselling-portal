@@ -1,6 +1,7 @@
 /**
  * Main student view component
  * Displays the student roadmap and notes interface
+ * Updated with improved auth session handling and file display reliability
  */
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
@@ -12,9 +13,10 @@ import TranscriptsPanel from './transcripts/TranscriptsPanel';
 import FilesPanel from './files/FilesPanel';
 import TasksWithDeadlines from './TasksWithDeadlines';
 import StudentHeader from './StudentHeader';
-import { Layers, FileText, FolderOpen, Calendar, MessageSquare } from 'lucide-react';
+import { Layers, FileText, FolderOpen, Calendar, MessageSquare, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useGenerateContext } from '../../hooks/useGenerateContext';
+import { useAuth } from '../../context/AuthContext';
 
 interface SelectedContext {
   phaseId: string | null;
@@ -33,6 +35,7 @@ export default function StudentView() {
   const [activePhaseId, setActivePhaseId] = useState<string | null>(null);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'roadmap' | 'transcript' | 'files' | 'notes' | 'deadlines'>('roadmap');
+  const { refreshSession } = useAuth();
   
   // Detail view state for notes and transcripts
   const [isDetailView, setIsDetailView] = useState(false);
@@ -43,13 +46,21 @@ export default function StudentView() {
 
   useEffect(() => {
     if (!studentId) return;
-    fetchStudentData();
-  }, [studentId]);
+    
+    // Refresh session when viewing a student to ensure auth is current
+    refreshSession().then(() => {
+      fetchStudentData();
+    }).catch(err => {
+      console.error("Error refreshing session:", err);
+      fetchStudentData(); // Continue with data fetch anyway
+    });
+  }, [studentId, refreshSession]);
 
   const fetchStudentData = async () => {
     if (!studentId) return;
     
     try {
+      console.log('Fetching student data for ID:', studentId);
       setLoading(true);
       // Fetch student data
       const { data: studentData, error: studentError } = await supabase
@@ -83,6 +94,8 @@ export default function StudentView() {
 
       if (tasksError) throw tasksError;
       setTasks(tasksData as Task[]);
+      
+      console.log('Student data loaded successfully');
     } catch (err) {
       console.error('Error fetching student data:', err);
       setError('Failed to load student data. Please try again.');
@@ -104,6 +117,7 @@ export default function StudentView() {
     if (!studentId) return;
     
     try {
+      console.log('Refreshing student data');
       const { data, error } = await supabase
         .from('students')
         .select('*')
@@ -122,6 +136,7 @@ export default function StudentView() {
   useEffect(() => {
     if (!studentId) return;
     
+    console.log('Setting up realtime subscription for student updates');
     const subscription = supabase
       .channel('students-channel')
       .on('postgres_changes', { 
@@ -129,15 +144,23 @@ export default function StudentView() {
         schema: 'public', 
         table: 'students',
         filter: `id=eq.${studentId}`
-      }, () => {
+      }, (payload) => {
+        console.log('Received student update event:', payload);
         refreshStudentData();
       })
       .subscribe();
     
     return () => {
+      console.log('Cleaning up student subscription');
       subscription.unsubscribe();
     };
   }, [studentId]);
+
+  // Handle error retries
+  const handleRetry = () => {
+    setError(null);
+    fetchStudentData();
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -147,7 +170,17 @@ export default function StudentView() {
         </div>
       ) : error ? (
         <div className="flex-1 flex justify-center items-center p-4">
-          <div className="text-red-500 bg-red-50 p-4 rounded-lg max-w-md text-center">{error}</div>
+          <div className="bg-red-50 p-6 rounded-lg max-w-md text-center">
+            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-red-800 mb-2">Error Loading Data</h3>
+            <p className="text-red-700 mb-4">{error}</p>
+            <button 
+              onClick={handleRetry}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
         </div>
       ) : student ? (
         <>
@@ -274,6 +307,7 @@ export default function StudentView() {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.3 }}
                 className="w-full overflow-auto"
+                key="files-panel" // Force re-render when switching to this tab
               >
                 <FilesPanel 
                   studentId={studentId || ''} 

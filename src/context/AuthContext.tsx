@@ -1,6 +1,7 @@
 /**
  * Authentication context for managing user sessions
  * Provides authentication state and methods to the entire app
+ * Updated with improved session persistence and debugging
  */
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
@@ -14,6 +15,7 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  refreshSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,9 +26,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [counsellor, setCounsellor] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Function to refresh session manually if needed
+  const refreshSession = async () => {
+    try {
+      console.log('Manually refreshing session');
+      const { data, error } = await supabase.auth.refreshSession();
+      if (error) {
+        console.error('Error refreshing session:', error);
+        return;
+      }
+      
+      console.log('Session refreshed successfully:', data.session?.user.id);
+      
+      // Update session and user
+      if (data.session) {
+        setSession(data.session);
+        setUser(data.session.user);
+        
+        // Fetch counsellor data with the refreshed session
+        await fetchCounsellorData(data.session.user.id);
+      }
+    } catch (error) {
+      console.error('Error in refreshSession:', error);
+    }
+  };
+
   useEffect(() => {
     // Get initial session
+    console.log('Getting initial auth session');
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session:', session?.user.id || 'No session');
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -37,7 +66,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     // Listen for auth changes
+    console.log('Setting up auth state change listener');
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('Auth state changed, event:', _event);
+      console.log('New session user:', session?.user.id || 'No session');
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -49,12 +81,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => {
+      console.log('Cleaning up auth state change listener');
       subscription.unsubscribe();
     };
   }, []);
 
   const fetchCounsellorData = async (userId: string) => {
     try {
+      console.log('Fetching counsellor data for user:', userId);
       const { data, error } = await supabase
         .from('counsellors')
         .select('*')
@@ -66,7 +100,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data) {
+        console.log('Counsellor data fetched successfully:', data.name);
         setCounsellor(data as AppUser);
+      } else {
+        console.warn('No counsellor data found for user:', userId);
       }
     } catch (error) {
       console.error('Error fetching counsellor data:', error);
@@ -78,8 +115,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
+      console.log('Signing in with email:', email);
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      console.log('Sign in successful');
     } catch (error) {
       console.error('Error signing in:', error);
       throw error;
@@ -91,8 +130,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       setLoading(true);
+      console.log('Signing out');
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      console.log('Sign out successful');
     } catch (error) {
       console.error('Error signing out:', error);
       throw error;
@@ -108,6 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     signIn,
     signOut,
+    refreshSession,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

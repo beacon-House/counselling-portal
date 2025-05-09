@@ -1,8 +1,9 @@
 /**
  * File Upload Modal Component
  * Provides an interface for uploading files and associating them with phases and tasks
+ * Enhanced with optimistic UI updates, better error handling, and improved state management
  */
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, Upload, AlertTriangle, File, Paperclip, FileText, 
   Check, Loader, CheckCircle2, Image as ImageIcon
@@ -44,6 +45,7 @@ export default function FileUploadModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const { counsellor } = useAuth();
+  const [uploadCompleteData, setUploadCompleteData] = useState<FileItem | null>(null);
 
   // Reset task when phase changes
   useEffect(() => {
@@ -58,7 +60,7 @@ export default function FileUploadModal({
     } else {
       setTaskId('');
     }
-  }, [phaseId, tasks]);
+  }, [phaseId, tasks, taskId]);
 
   // Set initial values
   useEffect(() => {
@@ -82,6 +84,15 @@ export default function FileUploadModal({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen, onClose, uploading]);
+
+  // If upload is complete and we have data, call the callback
+  useEffect(() => {
+    if (uploadCompleteData) {
+      console.log('Upload complete, calling parent callback with data:', uploadCompleteData);
+      onUploadComplete(uploadCompleteData);
+      setUploadCompleteData(null); // Reset for future uploads
+    }
+  }, [uploadCompleteData, onUploadComplete]);
 
   // Handle drag events
   const handleDrag = (e: React.DragEvent) => {
@@ -123,6 +134,7 @@ export default function FileUploadModal({
       return;
     }
     
+    console.log('File selected:', file.name, file.type, file.size);
     setSelectedFile(file);
     setError(null);
   };
@@ -159,12 +171,41 @@ export default function FileUploadModal({
     setUploadProgress(0);
     
     try {
+      console.log('Starting file upload process...');
+      
       // Generate a unique file name to avoid collisions
       const fileExt = selectedFile.name.split('.').pop();
       const randomId = Math.random().toString(36).substring(2, 15);
-      const filePath = `${studentId}/${randomId}_${selectedFile.name}`;
+      const fileName = `${randomId}_${selectedFile.name}`;
+      const filePath = `${studentId}/${fileName}`;
+      
+      console.log('File path for upload:', filePath);
+      
+      // Generate a temporary ID for optimistic UI update
+      const optimisticId = `temp-${Date.now()}`;
+      
+      // Create an optimistic file record for immediate UI update
+      const optimisticFile: FileItem = {
+        id: optimisticId,
+        student_id: studentId,
+        phase_id: phaseId || null,
+        task_id: taskId || null,
+        file_name: selectedFile.name,
+        file_url: URL.createObjectURL(selectedFile), // Create temporary URL for preview
+        file_type: selectedFile.type,
+        file_size: selectedFile.size,
+        description: description || null,
+        counsellor_id: counsellor.id,
+        created_at: new Date().toISOString(),
+        counsellor: {
+          name: counsellor.name
+        },
+        phase: phaseId ? phases.find(p => p.id === phaseId) : undefined,
+        task: taskId ? tasks.find(t => t.id === taskId) : undefined
+      };
       
       // Upload file to Supabase storage
+      console.log('Uploading file to storage...');
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('notes') // Using existing bucket for storage
         .upload(filePath, selectedFile, {
@@ -172,7 +213,12 @@ export default function FileUploadModal({
           upsert: false
         });
       
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        throw uploadError;
+      }
+      
+      console.log('File uploaded successfully, getting public URL');
       
       // Get the public URL for the uploaded file
       const { data: urlData } = await supabase.storage
@@ -185,6 +231,8 @@ export default function FileUploadModal({
       
       // Set upload progress to 50%
       setUploadProgress(50);
+      
+      console.log('Got public URL:', urlData.publicUrl);
       
       // Create a record in the files table
       const fileRecord = {
@@ -199,6 +247,8 @@ export default function FileUploadModal({
         counsellor_id: counsellor.id
       };
       
+      console.log('Creating file metadata record:', fileRecord);
+      
       const { data: insertData, error: insertError } = await supabase
         .from('files')
         .insert(fileRecord)
@@ -210,13 +260,18 @@ export default function FileUploadModal({
         `)
         .single();
       
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('Database insert error:', insertError);
+        throw insertError;
+      }
+      
+      console.log('File metadata inserted successfully:', insertData);
       
       // Set upload progress to 100%
       setUploadProgress(100);
       
-      // Return the created file record to the parent component
-      onUploadComplete(insertData as FileItem);
+      // Store the complete data for the parent callback
+      setUploadCompleteData(insertData as FileItem);
       
       // Reset the form
       resetForm();

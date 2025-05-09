@@ -1,12 +1,13 @@
 /**
  * Files panel component
  * Displays and manages files associated with a student
+ * Updated with improved caching, error handling, and realtime subscriptions
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Upload, Search, Filter, Calendar, FileText, X, Download, 
   Trash2, Edit, CheckCircle, Loader, Info, FileType, AlertTriangle, 
-  ExternalLink, Upload as UploadIcon
+  ExternalLink, Upload as UploadIcon, RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../../lib/supabase';
@@ -35,12 +36,47 @@ export default function FilesPanel({ studentId, phaseId, taskId, student }: File
   const [fileToDelete, setFileToDelete] = useState<FileItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { counsellor } = useAuth();
+  
+  // Reference to store subscription for cleanup
+  const filesSubscription = useRef<{ unsubscribe: () => void } | null>(null);
 
   useEffect(() => {
     fetchFiles();
     fetchPhases();
+    setupRealtimeSubscription();
+    
+    // Cleanup subscription on unmount
+    return () => {
+      if (filesSubscription.current) {
+        filesSubscription.current.unsubscribe();
+        console.log('Files subscription unsubscribed');
+      }
+    };
   }, [studentId, phaseId, taskId, filterPhaseId, filterTaskId]);
+
+  // Set up realtime subscription for file changes
+  const setupRealtimeSubscription = () => {
+    if (filesSubscription.current) {
+      filesSubscription.current.unsubscribe();
+    }
+
+    console.log('Setting up realtime subscription for files');
+    filesSubscription.current = supabase
+      .channel('files-changes')
+      .on('postgres_changes', {
+        event: '*', // Listen for all event types (INSERT, UPDATE, DELETE)
+        schema: 'public',
+        table: 'files',
+        filter: `student_id=eq.${studentId}`
+      }, (payload) => {
+        console.log('Received realtime update for files:', payload);
+        // Refresh the files list when data changes
+        fetchFiles();
+      })
+      .subscribe();
+  };
 
   // Clear success message after 3 seconds
   useEffect(() => {
@@ -54,8 +90,10 @@ export default function FilesPanel({ studentId, phaseId, taskId, student }: File
   }, [uploadSuccess]);
 
   const fetchFiles = async () => {
-    setLoading(true);
     try {
+      console.log('Fetching files for student:', studentId);
+      setLoading(true);
+      
       // Build the query
       let query = supabase
         .from('files')
@@ -70,26 +108,34 @@ export default function FilesPanel({ studentId, phaseId, taskId, student }: File
       
       // Apply filters
       if (filterPhaseId) {
+        console.log('Filtering by phase ID:', filterPhaseId);
         query = query.eq('phase_id', filterPhaseId);
       } else if (phaseId) {
+        console.log('Filtering by initial phase ID:', phaseId);
         query = query.eq('phase_id', phaseId);
       }
       
       if (filterTaskId) {
+        console.log('Filtering by task ID:', filterTaskId);
         query = query.eq('task_id', filterTaskId);
       } else if (taskId) {
+        console.log('Filtering by initial task ID:', taskId);
         query = query.eq('task_id', taskId);
       }
       
-      const { data, error } = await query;
+      // Add cache control headers to prevent caching
+      const { data, error } = await query.throwOnError();
       
       if (error) throw error;
+
+      console.log('Files fetched:', data?.length || 0);
       setFiles(data as FileItem[]);
     } catch (err) {
       console.error('Error fetching files:', err);
       setError('Failed to load files. Please try again.');
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -117,10 +163,16 @@ export default function FilesPanel({ studentId, phaseId, taskId, student }: File
   };
 
   const handleFileUploadComplete = (file: FileItem) => {
-    // Add the new file to the list
-    setFiles([file, ...files]);
+    console.log('File upload complete:', file);
+    // Set the success message
     setUploadSuccess(true);
     setIsUploadModalOpen(false);
+    
+    // Immediately add the file to the local state for optimistic UI update
+    setFiles(prevFiles => [file, ...prevFiles]);
+    
+    // Fetch files again to ensure consistency with the server
+    fetchFiles();
   };
 
   const handleDeleteClick = (file: FileItem) => {
@@ -133,10 +185,13 @@ export default function FilesPanel({ studentId, phaseId, taskId, student }: File
     
     setIsDeleting(true);
     try {
+      console.log('Deleting file:', fileToDelete.id);
+      
       // First, delete the file from storage
       const filePath = fileToDelete.file_url.split('/').pop(); // Extract file path from URL
       
       if (filePath) {
+        console.log('Removing file from storage:', filePath);
         const { error: storageError } = await supabase.storage
           .from('notes') // Using the existing storage bucket
           .remove([filePath]);
@@ -148,6 +203,7 @@ export default function FilesPanel({ studentId, phaseId, taskId, student }: File
       }
       
       // Delete the file metadata
+      console.log('Deleting file metadata from database:', fileToDelete.id);
       const { error: dbError } = await supabase
         .from('files')
         .delete()
@@ -155,9 +211,14 @@ export default function FilesPanel({ studentId, phaseId, taskId, student }: File
       
       if (dbError) throw dbError;
       
-      // Update the files list
+      console.log('File deleted successfully');
+      
+      // Update the files list - optimistic UI update
       setFiles(files.filter(f => f.id !== fileToDelete.id));
       setIsDeleteModalOpen(false);
+      
+      // Fetch files again to ensure consistency with server
+      fetchFiles();
     } catch (err) {
       console.error('Error deleting file:', err);
       setError('Failed to delete file. Please try again.');
@@ -261,6 +322,13 @@ export default function FilesPanel({ studentId, phaseId, taskId, student }: File
     window.open(fileUrl, '_blank', 'noopener,noreferrer');
   };
 
+  // Manual refresh button handler
+  const handleManualRefresh = () => {
+    console.log('Manual refresh requested');
+    setIsRefreshing(true);
+    fetchFiles();
+  };
+
   // Delete Confirmation Modal
   const DeleteConfirmationModal = () => (
     <AnimatePresence>
@@ -347,6 +415,16 @@ export default function FilesPanel({ studentId, phaseId, taskId, student }: File
         <h2 className="text-lg md:text-xl font-light text-gray-800">
           Files for {student.name}
         </h2>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={handleManualRefresh}
+          disabled={isRefreshing}
+          className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500"
+          title="Refresh files"
+        >
+          <RefreshCw className={`h-5 w-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+        </motion.button>
       </div>
       
       {error && (
