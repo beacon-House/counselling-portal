@@ -6,7 +6,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Upload, Search, Filter, Calendar, FileText, X, Download, 
   Trash2, Edit, CheckCircle, Loader, Info, FileType, AlertTriangle, 
-  ExternalLink, Upload as UploadIcon
+  ExternalLink, Upload as UploadIcon, RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../../lib/supabase';
@@ -24,6 +24,7 @@ interface FilesPanelProps {
 export default function FilesPanel({ studentId, phaseId, taskId, student }: FilesPanelProps) {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [phases, setPhases] = useState<Phase[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -36,10 +37,20 @@ export default function FilesPanel({ studentId, phaseId, taskId, student }: File
   const [isDeleting, setIsDeleting] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const { counsellor } = useAuth();
+  const fetchTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Store last fetch timestamp to help with debugging
+  const [lastFetchTime, setLastFetchTime] = useState<string>('');
 
   useEffect(() => {
     fetchFiles();
     fetchPhases();
+    
+    // Clear any existing timer when component unmounts
+    return () => {
+      if (fetchTimerRef.current) {
+        clearTimeout(fetchTimerRef.current);
+      }
+    };
   }, [studentId, phaseId, taskId, filterPhaseId, filterTaskId]);
 
   // Clear success message after 3 seconds
@@ -53,9 +64,40 @@ export default function FilesPanel({ studentId, phaseId, taskId, student }: File
     }
   }, [uploadSuccess]);
 
+  // Setup a subscription to file changes for this student
+  useEffect(() => {
+    if (!studentId) return;
+    
+    // Set up real-time subscription for file changes
+    const subscription = supabase
+      .channel(`files-${studentId}`)
+      .on('postgres_changes', {
+        event: '*', // Listen for all events (INSERT, UPDATE, DELETE)
+        schema: 'public',
+        table: 'files',
+        filter: `student_id=eq.${studentId}`
+      }, () => {
+        console.log('Files changed, refreshing data...');
+        fetchFiles();
+      })
+      .subscribe();
+      
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [studentId]);
+
   const fetchFiles = async () => {
+    if (fetchTimerRef.current) {
+      clearTimeout(fetchTimerRef.current);
+      fetchTimerRef.current = null;
+    }
+    
     setLoading(true);
+    setLastFetchTime(new Date().toISOString());
     try {
+      console.log(`Fetching files for student ${studentId} at ${new Date().toISOString()}`);
+      
       // Build the query
       let query = supabase
         .from('files')
@@ -84,12 +126,39 @@ export default function FilesPanel({ studentId, phaseId, taskId, student }: File
       const { data, error } = await query;
       
       if (error) throw error;
-      setFiles(data as FileItem[]);
+      
+      console.log(`Fetched ${data?.length || 0} files for student ${studentId}`);
+      
+      // Apply URL cache-busting to ensure fresh file URLs
+      const filesWithUpdatedUrls = (data || []).map(file => {
+        // Add a timestamp to the URL to bust cache
+        const cacheBuster = `?t=${Date.now()}`;
+        const updatedFileUrl = file.file_url.includes('?') 
+          ? `${file.file_url}&_cb=${Date.now()}`
+          : `${file.file_url}${cacheBuster}`;
+          
+        return {
+          ...file,
+          file_url: updatedFileUrl
+        };
+      });
+      
+      setFiles(filesWithUpdatedUrls as FileItem[]);
+      
+      // Schedule a re-fetch after a short delay to ensure we get any newly uploaded files
+      // This helps catch files that might have been uploaded but not yet fully processed
+      fetchTimerRef.current = setTimeout(() => {
+        if (refreshing) {
+          console.log('Performing delayed re-fetch of files...');
+          fetchFiles();
+        }
+      }, 2000);
     } catch (err) {
       console.error('Error fetching files:', err);
       setError('Failed to load files. Please try again.');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -117,10 +186,18 @@ export default function FilesPanel({ studentId, phaseId, taskId, student }: File
   };
 
   const handleFileUploadComplete = (file: FileItem) => {
-    // Add the new file to the list
-    setFiles([file, ...files]);
-    setUploadSuccess(true);
-    setIsUploadModalOpen(false);
+    console.log('File upload complete, updating UI:', file);
+    // Add the new file to the list with a delay to ensure it's in the database
+    setTimeout(() => {
+      setFiles(prevFiles => [file, ...prevFiles]);
+      setUploadSuccess(true);
+      setIsUploadModalOpen(false);
+      
+      // Schedule a fetch to ensure all files are up to date
+      setTimeout(() => {
+        fetchFiles();
+      }, 1000);
+    }, 500);
   };
 
   const handleDeleteClick = (file: FileItem) => {
@@ -132,19 +209,28 @@ export default function FilesPanel({ studentId, phaseId, taskId, student }: File
     if (!fileToDelete) return;
     
     setIsDeleting(true);
+    setError(null);
     try {
-      // First, delete the file from storage
-      const filePath = fileToDelete.file_url.split('/').pop(); // Extract file path from URL
+      console.log(`Deleting file: ${fileToDelete.id} - ${fileToDelete.file_name}`);
       
+      // Extract file path from URL
+      const fileUrl = new URL(fileToDelete.file_url);
+      const pathParts = fileUrl.pathname.split('/');
+      const filePath = pathParts[pathParts.length - 1];
+      
+      // First, delete the file from storage
       if (filePath) {
+        console.log(`Removing file from storage: ${filePath}`);
         const { error: storageError } = await supabase.storage
-          .from('notes') // Using the existing storage bucket
+          .from('notes') // Using existing bucket for storage
           .remove([filePath]);
         
         if (storageError) {
           console.error('Error removing file from storage:', storageError);
           // Continue anyway to delete the metadata
         }
+      } else {
+        console.warn('Could not extract file path from URL:', fileToDelete.file_url);
       }
       
       // Delete the file metadata
@@ -155,15 +241,29 @@ export default function FilesPanel({ studentId, phaseId, taskId, student }: File
       
       if (dbError) throw dbError;
       
+      console.log(`File deleted successfully: ${fileToDelete.id}`);
+      
       // Update the files list
       setFiles(files.filter(f => f.id !== fileToDelete.id));
       setIsDeleteModalOpen(false);
+      
+      // Re-fetch files after a short delay to ensure consistency
+      setTimeout(() => {
+        fetchFiles();
+      }, 1000);
     } catch (err) {
       console.error('Error deleting file:', err);
       setError('Failed to delete file. Please try again.');
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  // Manual refresh function
+  const handleManualRefresh = () => {
+    setRefreshing(true);
+    setError(null);
+    fetchFiles();
   };
 
   const filteredFiles = files.filter(file => {
@@ -258,7 +358,12 @@ export default function FilesPanel({ studentId, phaseId, taskId, student }: File
 
   // Handle external file view
   const handleViewFile = (fileUrl: string) => {
-    window.open(fileUrl, '_blank', 'noopener,noreferrer');
+    // Add a cache buster to the URL to ensure we get the latest version
+    const cacheBustUrl = fileUrl.includes('?') 
+      ? `${fileUrl}&_cb=${Date.now()}`
+      : `${fileUrl}?_cb=${Date.now()}`;
+      
+    window.open(cacheBustUrl, '_blank', 'noopener,noreferrer');
   };
 
   // Delete Confirmation Modal
@@ -347,6 +452,19 @@ export default function FilesPanel({ studentId, phaseId, taskId, student }: File
         <h2 className="text-lg md:text-xl font-light text-gray-800">
           Files for {student.name}
         </h2>
+        
+        {/* Refresh button */}
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={handleManualRefresh}
+          disabled={refreshing || loading}
+          className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500"
+          title="Refresh files list"
+          aria-label="Refresh files list"
+        >
+          <RefreshCw className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} />
+        </motion.button>
       </div>
       
       {error && (
@@ -450,6 +568,13 @@ export default function FilesPanel({ studentId, phaseId, taskId, student }: File
         )}
       </div>
       
+      {/* Last Fetch Time (hidden in production, useful for debugging) */}
+      {process.env.NODE_ENV !== 'production' && lastFetchTime && (
+        <div className="mb-4 text-xs text-gray-500">
+          Last fetch: {new Date(lastFetchTime).toLocaleTimeString()}
+        </div>
+      )}
+      
       {/* Files List */}
       <div>
         {loading ? (
@@ -503,7 +628,26 @@ export default function FilesPanel({ studentId, phaseId, taskId, student }: File
                         <a
                           href={file.file_url}
                           download={file.file_name}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           className="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            
+                            // Add cache buster to download URL
+                            const cacheBustUrl = file.file_url.includes('?') 
+                              ? `${file.file_url}&_cb=${Date.now()}`
+                              : `${file.file_url}?_cb=${Date.now()}`;
+                              
+                            // Create a temporary anchor element to trigger download with cache buster
+                            const a = document.createElement('a');
+                            a.href = cacheBustUrl;
+                            a.download = file.file_name;
+                            a.target = '_blank';
+                            a.rel = 'noopener noreferrer';
+                            a.click();
+                          }}
                         >
                           <Download className="h-4 w-4 mr-1" />
                           Download

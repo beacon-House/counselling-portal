@@ -41,9 +41,11 @@ export default function FileUploadModal({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [fileKey, setFileKey] = useState(''); // Used for storage file path to avoid collisions
   const fileInputRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const { counsellor } = useAuth();
+  const [uploadAttempt, setUploadAttempt] = useState(0); // Used to track retry attempts
 
   // Reset task when phase changes
   useEffect(() => {
@@ -58,12 +60,15 @@ export default function FileUploadModal({
     } else {
       setTaskId('');
     }
-  }, [phaseId, tasks]);
+  }, [phaseId, tasks, taskId]);
 
   // Set initial values
   useEffect(() => {
     if (initialPhaseId) setPhaseId(initialPhaseId);
     if (initialTaskId) setTaskId(initialTaskId);
+    
+    // Generate a unique file key for this upload session
+    setFileKey(crypto.randomUUID());
   }, [initialPhaseId, initialTaskId]);
 
   // Handle click outside to close modal
@@ -150,6 +155,26 @@ export default function FileUploadModal({
     }
   };
 
+  // Verify file exists in storage
+  const verifyFileExists = async (bucketName: string, filePath: string): Promise<boolean> => {
+    try {
+      console.log(`Verifying file exists: ${bucketName}/${filePath}`);
+      const { data, error } = await supabase.storage
+        .from(bucketName)
+        .download(filePath);
+      
+      if (error) {
+        console.error('Error verifying file:', error);
+        return false;
+      }
+      
+      return !!data;
+    } catch (err) {
+      console.error('Exception verifying file:', err);
+      return false;
+    }
+  };
+
   // Upload the file
   const handleUpload = async () => {
     if (!selectedFile || !counsellor) return;
@@ -157,22 +182,41 @@ export default function FileUploadModal({
     setUploading(true);
     setError(null);
     setUploadProgress(0);
+    setUploadAttempt(prev => prev + 1);
     
     try {
-      // Generate a unique file name to avoid collisions
-      const fileExt = selectedFile.name.split('.').pop();
-      const randomId = Math.random().toString(36).substring(2, 15);
-      const filePath = `${studentId}/${randomId}_${selectedFile.name}`;
+      console.log(`Starting file upload (attempt ${uploadAttempt + 1}): ${selectedFile.name}`);
+      
+      // Generate a unique file path to avoid collisions
+      // Using a combination of:
+      // - studentId
+      // - timestamp 
+      // - random UUID (fileKey)
+      // - original filename (without special characters)
+      const safeFilename = selectedFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const timestamp = Date.now();
+      const filePath = `${studentId}/${timestamp}_${fileKey}_${safeFilename}`;
+      
+      console.log(`File will be uploaded to path: ${filePath}`);
       
       // Upload file to Supabase storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('notes') // Using existing bucket for storage
         .upload(filePath, selectedFile, {
-          cacheControl: '3600',
-          upsert: false
+          cacheControl: 'max-age=0', // Ensure no caching
+          upsert: false // Don't overwrite existing files
         });
       
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
+      
+      // Verify the file was uploaded successfully
+      const fileExists = await verifyFileExists('notes', filePath);
+      if (!fileExists) {
+        throw new Error('File upload verification failed. Please try again.');
+      }
       
       // Get the public URL for the uploaded file
       const { data: urlData } = await supabase.storage
@@ -183,6 +227,13 @@ export default function FileUploadModal({
         throw new Error('Failed to get public URL for uploaded file');
       }
       
+      console.log(`File uploaded successfully. Public URL: ${urlData.publicUrl}`);
+      
+      // Add a cache buster to the URL
+      const publicUrl = urlData.publicUrl.includes('?') 
+        ? `${urlData.publicUrl}&_cb=${timestamp}` 
+        : `${urlData.publicUrl}?_cb=${timestamp}`;
+      
       // Set upload progress to 50%
       setUploadProgress(50);
       
@@ -192,12 +243,14 @@ export default function FileUploadModal({
         phase_id: phaseId || null,
         task_id: taskId || null,
         file_name: selectedFile.name,
-        file_url: urlData.publicUrl,
+        file_url: publicUrl,
         file_type: selectedFile.type,
         file_size: selectedFile.size,
         description: description || null,
         counsellor_id: counsellor.id
       };
+      
+      console.log('Creating file record in database:', fileRecord);
       
       const { data: insertData, error: insertError } = await supabase
         .from('files')
@@ -210,10 +263,18 @@ export default function FileUploadModal({
         `)
         .single();
       
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('Database insert error:', insertError);
+        throw insertError;
+      }
+      
+      console.log('File record created successfully:', insertData);
       
       // Set upload progress to 100%
       setUploadProgress(100);
+      
+      // Wait a moment to ensure the file is fully processed
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Return the created file record to the parent component
       onUploadComplete(insertData as FileItem);
@@ -222,7 +283,20 @@ export default function FileUploadModal({
       resetForm();
     } catch (err: any) {
       console.error('Error uploading file:', err);
-      setError(err.message || 'Failed to upload file');
+      
+      // More detailed error message
+      let errorMessage = 'Failed to upload file. ';
+      if (err.statusCode === 409) {
+        errorMessage += 'A file with this name already exists.';
+      } else if (err.statusCode === 413) {
+        errorMessage += 'File size exceeds the server limit.';
+      } else if (err.message) {
+        errorMessage += err.message;
+      }
+      
+      setError(errorMessage);
+      // Reset progress on error
+      setUploadProgress(0);
     } finally {
       setUploading(false);
     }
