@@ -232,7 +232,6 @@ export default function CreateStudent() {
                 <option value="State Board">State Board</option>
                 <option value="US Common Core">US Common Core</option>
                 <option value="AP">AP</option>
-                <option value="A-Levels">A-Levels</option>
                 <option value="ICSE">ICSE</option>
                 <option value="Others">Others</option>
               </select>
