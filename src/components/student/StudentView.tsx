@@ -12,6 +12,7 @@ import TranscriptsPanel from './transcripts/TranscriptsPanel';
 import FilesPanel from './files/FilesPanel';
 import TasksWithDeadlines from './TasksWithDeadlines';
 import StudentHeader from './StudentHeader';
+import StudentCalendar from './calendar/StudentCalendar';
 import { Layers, FileText, FolderOpen, Calendar, MessageSquare } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useGenerateContext } from '../../hooks/useGenerateContext';
@@ -32,7 +33,7 @@ export default function StudentView() {
   const [error, setError] = useState<string | null>(null);
   const [activePhaseId, setActivePhaseId] = useState<string | null>(null);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'roadmap' | 'transcript' | 'files' | 'notes' | 'deadlines'>('roadmap');
+  const [activeTab, setActiveTab] = useState<'roadmap' | 'transcript' | 'files' | 'notes' | 'deadlines' | 'calendar'>('roadmap');
   
   // Detail view state for notes and transcripts
   const [isDetailView, setIsDetailView] = useState(false);
@@ -212,6 +213,17 @@ export default function StudentView() {
                   <Calendar className="h-4 w-4 mr-2" />
                   Deadlines
                 </button>
+                <button
+                  onClick={() => setActiveTab('calendar')}
+                  className={`flex items-center py-3 px-3 md:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                    activeTab === 'calendar'
+                      ? 'border-gray-800 text-gray-800'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Calendar
+                </button>
               </div>
             </div>
           </div>
@@ -279,6 +291,18 @@ export default function StudentView() {
                   studentId={studentId || ''} 
                   phaseId={activePhaseId} 
                   taskId={activeTaskId}
+                  student={student}
+                />
+              </motion.div>
+            ) : activeTab === 'calendar' ? (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+                className="w-full overflow-auto"
+              >
+                <StudentCalendar 
+                  studentId={studentId || ''}
                   student={student}
                 />
               </motion.div>
